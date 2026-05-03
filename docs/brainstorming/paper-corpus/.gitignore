@@ -1,0 +1,13 @@
+# Generated pipeline artifacts
+extracted/
+normalized/
+corpus/
+derived/
+reports/
+
+# Raw PDFs: keep local unless explicitly intended
+papers/**/*.pdf
+
+# Python cache
+__pycache__/
+*.pyc
