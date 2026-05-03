@@ -5,6 +5,9 @@ Usage:
     python -m gonghaebun.cli study <concept> --source-local <path> [options]
     python -m gonghaebun       study <concept> --source-local <path> [options]
     gonghaebun                 study <concept> --source-local <path> [options]
+
+    python -m gonghaebun.cli build-bank --source-local <path> --bank-dir <dir> [options]
+    gonghaebun                build-bank --source-local <path> --bank-dir <dir> [options]
 """
 from __future__ import annotations
 
@@ -60,6 +63,32 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Maximum characters in source excerpt. (default: 8000)",
     )
 
+    # ------------------------------------------------------------------
+    # build-bank subcommand
+    # ------------------------------------------------------------------
+    build_bank = subparsers.add_parser(
+        "build-bank",
+        help="Build a question bank from a source Markdown file.",
+    )
+    build_bank.add_argument(
+        "--source-local",
+        required=True,
+        metavar="PATH",
+        help="Path to the local source Markdown file (required).",
+    )
+    build_bank.add_argument(
+        "--document-id",
+        default=None,
+        metavar="ID",
+        help="Document ID slug (inferred from source filename if omitted).",
+    )
+    build_bank.add_argument(
+        "--bank-dir",
+        required=True,
+        metavar="DIR",
+        help="Directory for question-bank output artifacts (required).",
+    )
+
     return parser
 
 
@@ -69,6 +98,9 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "study":
         return _cmd_study(args)
+
+    if args.command == "build-bank":
+        return _cmd_build_bank(args)
 
     parser.print_help()
     return 1
@@ -168,6 +200,46 @@ def _cmd_study(args: argparse.Namespace) -> int:
 
     print()
     print(f"STUDY.md: {study_md_path}")
+
+    return 0
+
+
+def _cmd_build_bank(args: argparse.Namespace) -> int:
+    from gonghaebun.bank_session import run_bank_session
+
+    source_path = Path(args.source_local)
+    if not source_path.exists():
+        print(
+            f"Error: source file not found: {source_path}",
+            file=sys.stderr,
+        )
+        return 2
+
+    document_id: str = args.document_id or source_path.stem
+    bank_dir = Path(args.bank_dir)
+
+    print(f"Building question bank from: {source_path}")
+    print(f"Document ID : {document_id}")
+    print(f"Output dir  : {bank_dir}")
+    print()
+
+    blocks, questions = run_bank_session(source_path, document_id, bank_dir)
+
+    if not blocks:
+        print(
+            "Warning: no content blocks were parsed from the source file. "
+            "The source may be empty or contain only short passages.",
+            file=sys.stderr,
+        )
+
+    print(f"Blocks    : {len(blocks)}")
+    print(f"Questions : {len(questions)}")
+    print()
+    print("Artifacts:")
+    for name in ("blocks.generated.json", "questions.generated.json"):
+        path = bank_dir / name
+        status = "OK" if path.exists() else "MISSING"
+        print(f"  [{status}] {path}")
 
     return 0
 
