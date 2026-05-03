@@ -1,0 +1,6 @@
+{
+  "accuracy_score": 0.6,
+  "missing_elements": ["finite subcover condition must hold for ALL open covers, not just some"],
+  "errors": [],
+  "feedback": "Good start — you captured the key idea of open covers. The crucial point to sharpen: the definition requires that EVERY open cover (not just one particular cover) has a finite subcover. Make sure your statement is universal."
+}

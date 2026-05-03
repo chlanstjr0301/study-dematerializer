@@ -1,0 +1,32 @@
+{
+  "concept_id": "compactness",
+  "misconceptions": [
+    {
+      "id": "compactness_m01",
+      "claim": "compact = bounded",
+      "is_correct": false,
+      "counterexample": "In a discrete metric space, any infinite set is bounded (diameter ≤ 1) but not compact: the cover by singletons has no finite subcover.",
+      "explanation": "Compact implies bounded in ℝⁿ (Heine-Borel), but not in general metric spaces.",
+      "checked_in_session": false,
+      "learner_was_correct": null
+    },
+    {
+      "id": "compactness_m02",
+      "claim": "closed ⟹ compact",
+      "is_correct": false,
+      "counterexample": "ℝ is closed in itself but not compact: {(-n, n)} is an open cover with no finite subcover.",
+      "explanation": "In ℝⁿ you need BOTH closed AND bounded (Heine-Borel). In general, you need the ambient space to be compact for a closed subset to be compact.",
+      "checked_in_session": false,
+      "learner_was_correct": null
+    },
+    {
+      "id": "compactness_m03",
+      "claim": "every subset of a compact set is compact",
+      "is_correct": false,
+      "counterexample": "[0,1] is compact; (0,1) ⊂ [0,1] is not compact.",
+      "explanation": "Only CLOSED subsets of compact sets are compact. Open subsets can fail to be compact.",
+      "checked_in_session": false,
+      "learner_was_correct": null
+    }
+  ]
+}

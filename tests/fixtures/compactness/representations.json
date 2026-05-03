@@ -1,0 +1,32 @@
+{
+  "formal": {
+    "type": "formal",
+    "content": "**Definition (Compactness).** A subset $K$ of a metric space $(X, d)$ is *compact* if every open cover of $K$ has a finite subcover.\n\nFormally: $K$ is compact $\\iff$ for every collection $\\{G_\\alpha\\}$ of open sets in $X$ such that $K \\subseteq \\bigcup_\\alpha G_\\alpha$, there exist finitely many indices $\\alpha_1, \\ldots, \\alpha_n$ such that $K \\subseteq G_{\\alpha_1} \\cup \\cdots \\cup G_{\\alpha_n}$.\n\n**Equivalent characterization (Heine-Borel, $\\mathbb{R}^n$):** $K \\subseteq \\mathbb{R}^n$ is compact $\\iff$ $K$ is closed and bounded.\n\n**Equivalent characterization (sequential):** In a metric space, $K$ is compact $\\iff$ every sequence in $K$ has a subsequence converging to a point in $K$.",
+    "mastery_state": "unknown",
+    "last_reviewed": null
+  },
+  "intuitive": {
+    "type": "intuitive",
+    "content": "**Intuition for Compactness.**\n\nThink of compact as meaning *'finite in spirit'*: even though a compact set can have infinitely many points, it behaves like a finite set in many important ways.\n\nMore concretely: you can always 'patrol' the entire set with finitely many local observers, each watching a small open neighborhood. No matter how you assign those observers, you can always get away with a finite crew.\n\nIn $\\mathbb{R}$: compact $\\approx$ closed + bounded. The set $[0,1]$ is compact; $(0,1)$ is not (unbounded observers near 0 can never be replaced by a finite number).\n\n**Why it matters:** Compact sets are where continuous functions are guaranteed to reach their maximum and minimum (Extreme Value Theorem). Proofs often start with 'Let $K$ be compact...' to gain this finiteness.",
+    "mastery_state": "unknown",
+    "last_reviewed": null
+  },
+  "visual": {
+    "type": "visual",
+    "content": "**Visual Description: Compact vs. Non-Compact**\n\n```\nCompact: [====closed====]      Non-compact: (----open----)\n         ^ closed endpoint               ^ missing endpoint\n         bounded in R                    or unbounded: ------->\n```\n\nIn $\\mathbb{R}^2$: imagine drawing a disk. A closed disk (including its boundary circle) is compact. An open disk (boundary excluded) is not — you can cover it with open sets that 'squeeze' in from the boundary, requiring infinitely many.\n\nMnemonic: **'Can't escape a compact set.'** If you keep picking points in a compact set, you must accumulate somewhere inside the set (sequentially compact = no escaping to the boundary or to infinity).",
+    "mastery_state": "unknown",
+    "last_reviewed": null
+  },
+  "counterexample": {
+    "type": "counterexample",
+    "content": "**Counterexamples: What Is NOT Compact**\n\n1. **$(0, 1)$ is not compact.** Consider the open cover $\\{(1/n, 1) : n \\geq 2\\}$. This covers $(0,1)$ but has no finite subcover — any finite sub-collection misses points near $0$.\n\n2. **$\\mathbb{R}$ is not compact.** The cover $\\{(-n, n) : n \\in \\mathbb{N}\\}$ has no finite subcover.\n\n3. **'Compact $=$ bounded' is WRONG.** In a discrete metric space, every subset is both closed and bounded (since $d(x,y) \\in \\{0,1\\}$), but an infinite set is not compact — the cover by singletons $\\{\\{x\\} : x \\in K\\}$ has no finite subcover.\n\n4. **'Closed $\\Rightarrow$ compact' is WRONG.** $\\mathbb{R}$ is closed in itself but not compact.\n\n5. **'Subsets of compact sets are compact' is WRONG.** $[0,1]$ is compact; $(0,1) \\subset [0,1]$ is not.",
+    "mastery_state": "unknown",
+    "last_reviewed": null
+  },
+  "proof_schema": {
+    "type": "proof_schema",
+    "content": "**Proof Schema: 'K is compact'**\n\n**Goal:** Show that $K$ is compact, i.e., every open cover has a finite subcover.\n\n**Standard strategy:**\n1. *Let $\\{G_\\alpha\\}$ be an arbitrary open cover of $K$.* (Never assume a special cover — the proof must work for all covers.)\n2. *Apply a structural property of $K$* (closed + bounded in $\\mathbb{R}^n$, or: $K$ is a closed subset of a known compact set, etc.).\n3. *Extract a finite subcover* using that structural property.\n4. *Conclude* that $K$ is compact.\n\n**Common sub-patterns:**\n- **Heine-Borel route:** Enclose $K$ in a closed interval/box; use the fact that closed bounded intervals in $\\mathbb{R}$ are compact (proved by bisection/nested intervals).\n- **Closed subset route:** If $K$ is a closed subset of a compact set $C$, then for any open cover of $K$, add $K^c$ (open) to get a cover of $C$; extract a finite subcover; remove $K^c$.\n- **Continuous image route:** $f(K)$ is compact when $f$ is continuous and $K$ is compact — use preimages of the cover.\n\n**Common pitfalls:**\n- Forgetting that the cover must be *arbitrary*.\n- Assuming the cover is countable (not required by the definition).\n- Confusing 'open cover of $K$' with 'open cover of $X$'.",
+    "mastery_state": "unknown",
+    "last_reviewed": null
+  }
+}

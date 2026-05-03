@@ -1,0 +1,239 @@
+"""
+Top-level session orchestrator for Gonghaebun MVP 1.
+
+Runs Stages 0–7 in sequence and writes all 10 artifacts to output_dir.
+"""
+from __future__ import annotations
+
+import json
+import uuid
+from datetime import datetime, timezone
+from pathlib import Path
+
+from gonghaebun.knowledge.real_analysis import CONCEPT_KEYWORDS
+from gonghaebun.llm.base import LLMClient
+from gonghaebun.models.session_models import MasteryUpdate, StudySession
+from gonghaebun.pipeline.concept_resolver import resolve_concept
+from gonghaebun.pipeline.graph_builder import build_prerequisite_graph
+from gonghaebun.pipeline.misconception_checker import check_misconceptions
+from gonghaebun.pipeline.recall_orchestrator import generate_recall_tasks, render_recall_tasks
+from gonghaebun.pipeline.representation_gen import (
+    generate_representations,
+    render_representation_cards,
+)
+from gonghaebun.pipeline.self_explanation import render_self_explanation_prompt
+from gonghaebun.pipeline.source_loader import load_and_extract
+from gonghaebun.pipeline.study_writer import write_study_artifacts
+from gonghaebun.study_md.writer import compute_mastery_state, compute_next_review_date
+
+
+def run_new_concept_session(
+    concept_input: str,
+    source_path: Path,
+    llm: LLMClient,
+    output_dir: Path,
+    study_md_path: Path,
+    interactive: bool = False,
+) -> StudySession:
+    """
+    Run a full new-concept study session (Stages 0–7).
+
+    Writes all 10 artifacts to output_dir:
+      1. source_manifest.json
+      2. source_excerpt.md
+      3. concept_decomposition.json
+      4. prerequisite_graph.json
+      5. representation_cards.md
+      6. self_explanation_prompt.md
+      7. diagnosis.json
+      8. recall_tasks.md
+      9. STUDY.patch.md
+      10. session.json
+
+    Returns the finalized StudySession.
+    """
+    session_id = str(uuid.uuid4())
+    started_at = datetime.now(timezone.utc).isoformat()
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    # ------------------------------------------------------------------
+    # Stage 0: Source Loader
+    # ------------------------------------------------------------------
+    concept = resolve_concept(concept_input)
+    concept_id = concept.concept_id
+    keywords = CONCEPT_KEYWORDS.get(concept_id, [])
+
+    manifest = load_and_extract(
+        source_path=source_path,
+        concept_id=concept_id,
+        keywords=keywords,
+        output_dir=output_dir,
+    )
+
+    source_excerpt_path = output_dir / "source_excerpt.md"
+    source_excerpt = source_excerpt_path.read_text(encoding="utf-8")
+
+    # ------------------------------------------------------------------
+    # Stage 1: Concept Resolver — write concept_decomposition.json
+    # ------------------------------------------------------------------
+    concept_decomposition = {
+        "concept_id": concept_id,
+        "canonical_name": concept.canonical_name,
+        "domain": concept.domain,
+        "aliases": concept.aliases,
+        "prerequisites": concept.prerequisites,
+        "grounding_status": "source_excerpt",
+        "source_coverage": manifest.source_coverage,
+        "generated_at": started_at,
+        "llm_backend": llm.__class__.__name__,
+    }
+    (output_dir / "concept_decomposition.json").write_text(
+        json.dumps(concept_decomposition, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+
+    # ------------------------------------------------------------------
+    # Stage 2: Prerequisite Graph — write prerequisite_graph.json
+    # ------------------------------------------------------------------
+    graph = build_prerequisite_graph(concept_id)
+    graph_data = {
+        "root_concept_id": graph.root_concept_id,
+        "nodes": [
+            {
+                "concept_id": n.concept_id,
+                "canonical_name": n.canonical_name,
+                "depth": n.depth,
+                "mastery_state": n.mastery_state,
+            }
+            for n in graph.nodes
+        ],
+        "edges": [
+            {"from_concept": e.from_concept, "to_concept": e.to_concept}
+            for e in graph.edges
+        ],
+        "generated_at": graph.generated_at,
+    }
+    (output_dir / "prerequisite_graph.json").write_text(
+        json.dumps(graph_data, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+
+    # ------------------------------------------------------------------
+    # Stage 3: Representation Generator — write representation_cards.md
+    # ------------------------------------------------------------------
+    rep_set = generate_representations(
+        concept_id=concept_id,
+        source_excerpt=source_excerpt,
+        source_hash=manifest.source_hash,
+        llm=llm,
+    )
+    cards_md = render_representation_cards(rep_set)
+    (output_dir / "representation_cards.md").write_text(cards_md, encoding="utf-8")
+
+    # ------------------------------------------------------------------
+    # Stage 5 (template only): Self-Explanation Prompt
+    # ------------------------------------------------------------------
+    self_exp_md = render_self_explanation_prompt(concept_id, rep_set)
+    (output_dir / "self_explanation_prompt.md").write_text(self_exp_md, encoding="utf-8")
+
+    # ------------------------------------------------------------------
+    # Stage 4: Misconception Checker — write diagnosis.json
+    # ------------------------------------------------------------------
+    diagnosis = check_misconceptions(
+        concept_id=concept_id,
+        rep_set=rep_set,
+        source_coverage=manifest.source_coverage,
+        llm=llm,
+    )
+    (output_dir / "diagnosis.json").write_text(
+        json.dumps(diagnosis, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+
+    # ------------------------------------------------------------------
+    # Stage 6: White Recall — write recall_tasks.md
+    # ------------------------------------------------------------------
+    # Default mastery for a brand-new concept
+    recall_mastery = "unknown"
+    tasks_data = generate_recall_tasks(
+        concept_id=concept_id,
+        mastery_state=recall_mastery,
+        llm=llm,
+    )
+    recall_md = render_recall_tasks(tasks_data)
+    (output_dir / "recall_tasks.md").write_text(recall_md, encoding="utf-8")
+
+    # ------------------------------------------------------------------
+    # Build mastery updates (one per representation type, from recall tasks)
+    # ------------------------------------------------------------------
+    mastery_updates: list[MasteryUpdate] = []
+    for rep in rep_set.as_list():
+        after = compute_mastery_state(0.0)  # no learner response in non-interactive
+        next_review = compute_next_review_date(after)
+        mastery_updates.append(
+            MasteryUpdate(
+                concept_id=concept_id,
+                representation_type=rep.type,
+                before="unknown",
+                after=after,
+                next_review_date=next_review,
+            )
+        )
+
+    # ------------------------------------------------------------------
+    # Assemble StudySession
+    # ------------------------------------------------------------------
+    ended_at = datetime.now(timezone.utc).isoformat()
+    session = StudySession(
+        session_id=session_id,
+        session_type="new_concept",
+        concept_ids=[concept_id],
+        started_at=started_at,
+        ended_at=ended_at,
+        llm_backend=llm.__class__.__name__,
+        source_path=str(source_path),
+        source_hash=manifest.source_hash,
+        grounding_mode=manifest.grounding_mode,
+        source_excerpt_path=str(output_dir / "source_excerpt.md"),
+        source_manifest_path=str(output_dir / "source_manifest.json"),
+        mastery_updates=mastery_updates,
+        recall_attempts=[],
+    )
+
+    # ------------------------------------------------------------------
+    # Stage 7: Study Writer — STUDY.patch.md + STUDY.md
+    # ------------------------------------------------------------------
+    write_study_artifacts(session, output_dir, study_md_path)
+
+    # ------------------------------------------------------------------
+    # Write session.json (artifact 10)
+    # ------------------------------------------------------------------
+    session_data = {
+        "session_id": session.session_id,
+        "session_type": session.session_type,
+        "concept_ids": session.concept_ids,
+        "started_at": session.started_at,
+        "ended_at": session.ended_at,
+        "llm_backend": session.llm_backend,
+        "source_path": session.source_path,
+        "source_hash": session.source_hash,
+        "grounding_mode": session.grounding_mode,
+        "source_excerpt_path": session.source_excerpt_path,
+        "source_manifest_path": session.source_manifest_path,
+        "mastery_updates": [
+            {
+                "concept_id": u.concept_id,
+                "representation_type": u.representation_type,
+                "before": u.before,
+                "after": u.after,
+                "next_review_date": u.next_review_date,
+            }
+            for u in session.mastery_updates
+        ],
+    }
+    (output_dir / "session.json").write_text(
+        json.dumps(session_data, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+
+    return session

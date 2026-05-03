@@ -1,0 +1,23 @@
+{
+  "root_concept_id": "compactness",
+  "generated_at": "2026-01-01T00:00:00Z",
+  "nodes": [
+    {"concept_id": "metric_space", "canonical_name": "Metric Space", "depth": 1, "mastery_state": "unknown"},
+    {"concept_id": "open_set", "canonical_name": "Open Set", "depth": 1, "mastery_state": "unknown"},
+    {"concept_id": "open_cover", "canonical_name": "Open Cover", "depth": 1, "mastery_state": "unknown"},
+    {"concept_id": "heine_borel", "canonical_name": "Heine-Borel Theorem", "depth": 2, "mastery_state": "unknown"},
+    {"concept_id": "sequential_compactness", "canonical_name": "Sequential Compactness", "depth": 2, "mastery_state": "unknown"}
+  ],
+  "edges": [
+    {"from": "metric_space", "to": "compactness"},
+    {"from": "open_set", "to": "compactness"},
+    {"from": "open_cover", "to": "compactness"},
+    {"from": "heine_borel", "to": "compactness"},
+    {"from": "sequential_compactness", "to": "compactness"},
+    {"from": "open_set", "to": "open_cover"},
+    {"from": "metric_space", "to": "open_set"},
+    {"from": "open_cover", "to": "heine_borel"},
+    {"from": "metric_space", "to": "heine_borel"},
+    {"from": "metric_space", "to": "sequential_compactness"}
+  ]
+}

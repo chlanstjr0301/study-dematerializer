@@ -12,3 +12,19 @@ __pycache__/
 .venv/
 venv/
 .env
+*.egg-info/
+dist/
+build/
+
+# Gonghaebun private source material (do not commit)
+data/private/
+
+# Gonghaebun runtime user data (do not commit)
+data/gonghaebun/
+runs/
+tmp_runs/
+tmp_STUDY.md
+*.bak
+
+tmp_runs/
+tmp_runs

@@ -1,0 +1,30 @@
+{
+  "concept_id": "compactness",
+  "mastery_state": "unknown",
+  "tasks": [
+    {
+      "id": "recall_01",
+      "type": "definition_recall",
+      "prompt": "Without looking at any notes: state the definition of compactness in a metric space.",
+      "hint": null
+    },
+    {
+      "id": "recall_02",
+      "type": "counterexample_recall",
+      "prompt": "Give one example of a set that is NOT compact in ℝ, and briefly explain why the definition fails.",
+      "hint": null
+    },
+    {
+      "id": "recall_03",
+      "type": "intuition_recall",
+      "prompt": "In one or two sentences, explain the intuition behind compactness without using the word 'cover'.",
+      "hint": null
+    },
+    {
+      "id": "recall_04",
+      "type": "proof_schema_recall",
+      "prompt": "What is the FIRST line you write when proving that a set K is compact from the definition?",
+      "hint": null
+    }
+  ]
+}
