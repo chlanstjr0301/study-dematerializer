@@ -1,0 +1,14 @@
+# Paper corpus generated outputs
+docs/brainstorming/paper-corpus/extracted/
+docs/brainstorming/paper-corpus/normalized/
+docs/brainstorming/paper-corpus/corpus/
+docs/brainstorming/paper-corpus/derived/
+docs/brainstorming/paper-corpus/reports/
+docs/brainstorming/paper-corpus/papers/
+
+# Python artifacts
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
