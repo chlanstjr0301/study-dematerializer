@@ -45,18 +45,41 @@ export interface SummaryResponse {
 
 // Visualization artifact shapes matching MVP3.1 outputs
 
+export interface MasteryRepresentation {
+  type: string;           // formal | intuitive | visual | counterexample | proof_schema
+  before: string;         // unknown | partial | solid
+  after: string;
+  accuracy_score: number; // 0.0–1.0
+}
+
 export interface MasteryMapData {
-  concept_id?: string;
-  overall_mastery?: string;
-  weakest_links?: unknown[];
-  representations?: unknown[];
+  concept_id: string;
+  overall_mastery: string;
+  representations: MasteryRepresentation[];
+  weakest_links: string[];
 }
 
 // recall_feedback.json is a list — one entry per attempt
-export type RecallFeedbackData = Array<Record<string, unknown>>;
+export interface RecallFeedbackItem {
+  question_id: string;
+  representation_type: string;
+  learner_response: string;
+  accuracy_score: number;
+  missing_elements: string[];
+  errors: string[];
+  feedback: string;
+  needs_human_review: boolean;
+}
+export type RecallFeedbackData = RecallFeedbackItem[];
 
 // review_queue.json is a list — one entry per concept
-export type ReviewQueueData = Array<Record<string, unknown>>;
+export interface ReviewQueueItem {
+  concept_id: string;
+  next_review_date: string;       // YYYY-MM-DD
+  weakest_representation: string;
+  due_status: string;             // overdue | due_today | upcoming
+}
+export type ReviewQueueData = ReviewQueueItem[];
 
 // POST /api/sessions request/response
 

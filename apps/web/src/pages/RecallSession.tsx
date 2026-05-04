@@ -1,14 +1,18 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { getBanks, getBank, runSession } from '../api/client';
+import { Link, useSearchParams } from 'react-router-dom';
+import { getBanks, getBank, runSession, getVisualization } from '../api/client';
 import type {
   BankSummaryItem,
   QuestionItem,
   RunSessionRequest,
   RunSessionResponse,
+  MasteryMapData,
+  RecallFeedbackData,
 } from '../api/types';
 
 export default function RecallSession() {
+  const [searchParams] = useSearchParams();
+
   const [banks, setBanks] = useState<BankSummaryItem[] | null>(null);
   const [banksError, setBanksError] = useState<string | null>(null);
 
@@ -22,11 +26,23 @@ export default function RecallSession() {
   const [result, setResult] = useState<RunSessionResponse | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
+  const [masteryResult, setMasteryResult] = useState<MasteryMapData | null>(null);
+  const [feedbackResult, setFeedbackResult] = useState<RecallFeedbackData | null>(null);
+
   useEffect(() => {
     getBanks()
       .then(setBanks)
       .catch((e: unknown) => setBanksError(String(e)));
   }, []);
+
+  // Auto-select from ?concept= param after banks load
+  useEffect(() => {
+    const param = searchParams.get('concept');
+    if (param && !selected && banks && banks.some(b => b.concept_id === param)) {
+      selectConcept(param);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [banks]);
 
   function selectConcept(conceptId: string) {
     setSelected(conceptId);
@@ -36,6 +52,8 @@ export default function RecallSession() {
     setResult(null);
     setSubmitError(null);
     setAnswers({});
+    setMasteryResult(null);
+    setFeedbackResult(null);
     getBank(conceptId)
       .then((qs) => {
         setQuestions(qs);
@@ -59,6 +77,8 @@ export default function RecallSession() {
     setSubmitting(true);
     setSubmitError(null);
     setResult(null);
+    setMasteryResult(null);
+    setFeedbackResult(null);
 
     const payload: RunSessionRequest = {
       concept_id: selected,
@@ -74,6 +94,13 @@ export default function RecallSession() {
       .then((res) => {
         setResult(res);
         setSubmitting(false);
+        Promise.all([
+          getVisualization(res.session_id, 'mastery_map'),
+          getVisualization(res.session_id, 'recall_feedback'),
+        ]).then(([map, fb]) => {
+          setMasteryResult(map as MasteryMapData);
+          setFeedbackResult(fb as RecallFeedbackData);
+        }).catch(() => { /* silent — summary_md still shown */ });
       })
       .catch((e: unknown) => {
         setSubmitError(String(e));
@@ -192,9 +219,90 @@ export default function RecallSession() {
             </details>
           )}
 
-          <Link className="session-link" to={`/sessions/${result.session_id}`}>
-            View Session Detail →
-          </Link>
+          {/* Mastery changes */}
+          {masteryResult && (
+            <div style={{ marginBottom: 16 }}>
+              <h3 style={{ marginBottom: 8 }}>Mastery Changes</h3>
+              <table className="table-simple">
+                <thead>
+                  <tr>
+                    <th>Representation</th>
+                    <th>Before</th>
+                    <th>After</th>
+                    <th>Score</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {masteryResult.representations.map((r, i) => (
+                    <tr key={i}>
+                      <td>{r.type}</td>
+                      <td style={{ color: r.before === 'solid' ? '#15803d' : r.before === 'partial' ? '#92400e' : '#b91c1c' }}>
+                        {r.before}
+                      </td>
+                      <td style={{
+                        color: r.after === 'solid' ? '#15803d' : r.after === 'partial' ? '#92400e' : '#b91c1c',
+                        fontWeight: 600,
+                      }}>
+                        {r.after}
+                      </td>
+                      <td>{(r.accuracy_score * 100).toFixed(0)}%</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* Weak questions */}
+          {feedbackResult && (() => {
+            const weak = feedbackResult.filter(
+              f => f.accuracy_score < 0.5 || f.needs_human_review
+            );
+            return (
+              <div style={{ marginBottom: 16 }}>
+                <h3 style={{ marginBottom: 8 }}>Weak Questions</h3>
+                {weak.length === 0 ? (
+                  <p style={{ fontSize: 14, color: '#15803d' }}>No weak questions — great work!</p>
+                ) : (
+                  weak.map((f, i) => (
+                    <div key={i} style={{
+                      background: '#fafafa', border: '1px solid #e5e7eb',
+                      borderRadius: 6, padding: '10px 14px', marginBottom: 8, fontSize: 13,
+                    }}>
+                      {f.needs_human_review && (
+                        <span style={{
+                          background: '#fef3c7', color: '#92400e', fontSize: 11,
+                          padding: '1px 6px', borderRadius: 4, marginRight: 6, fontWeight: 600,
+                        }}>
+                          ⚠ Review
+                        </span>
+                      )}
+                      <span style={{ fontFamily: 'monospace', color: '#555', fontSize: 11 }}>
+                        {f.question_id}
+                      </span>
+                      {f.feedback && (
+                        <p style={{ marginTop: 6 }}>{f.feedback}</p>
+                      )}
+                      {f.missing_elements.length > 0 && (
+                        <ul style={{ paddingLeft: 16, marginTop: 4 }}>
+                          {f.missing_elements.map((el, j) => <li key={j}>{el}</li>)}
+                        </ul>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
+            );
+          })()}
+
+          <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+            <Link className="session-link" to={`/sessions/${result.session_id}`}>
+              View Session Detail →
+            </Link>
+            <Link className="session-link" to="/">
+              Back to Dashboard →
+            </Link>
+          </div>
         </div>
       )}
     </div>

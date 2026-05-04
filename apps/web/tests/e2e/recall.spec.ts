@@ -33,3 +33,11 @@ test('recall page renders heading and bank state', async ({ page }) => {
     page.locator('.concept-list, .empty-state')
   ).toBeVisible({ timeout: 5000 });
 });
+
+test('recall page accepts concept query param', async ({ page }) => {
+  await page.goto('/recall?concept=compactness');
+  await expect(page.locator('h1')).toContainText('Recall Session');
+  await expect(
+    page.locator('.concept-list, .empty-state, .question-card')
+  ).toBeVisible({ timeout: 5000 });
+});

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { getHealth, getDue, getStudyMd } from '../api/client';
 import type { HealthResponse, DueConceptItem, StudyMdResponse } from '../api/types';
 import StudyMdViewer from '../components/StudyMdViewer';
@@ -62,6 +63,7 @@ export default function Dashboard() {
                   <th>Concept</th>
                   <th>Next review</th>
                   <th>Status</th>
+                  <th></th>
                 </tr>
               </thead>
               <tbody>
@@ -73,6 +75,11 @@ export default function Dashboard() {
                       <span className={item.overdue ? 'badge badge-overdue' : 'badge'}>
                         {item.overdue ? 'overdue' : 'due'}
                       </span>
+                    </td>
+                    <td>
+                      <Link to={`/recall?concept=${item.concept_id}`} className="session-link">
+                        Review Now →
+                      </Link>
                     </td>
                   </tr>
                 ))}

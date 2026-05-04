@@ -1,5 +1,11 @@
 import type { MasteryMapData } from '../api/types';
 
+function masteryColor(level: string) {
+  if (level === 'solid')   return '#15803d';
+  if (level === 'partial') return '#92400e';
+  return '#b91c1c';
+}
+
 export default function MasteryMap({ data }: { data: MasteryMapData }) {
   const reps = Array.isArray(data.representations) ? data.representations : [];
 
@@ -29,23 +35,20 @@ export default function MasteryMap({ data }: { data: MasteryMapData }) {
             <thead>
               <tr>
                 <th>Type</th>
-                <th>Mastery</th>
+                <th>Before</th>
+                <th>After</th>
+                <th>Score</th>
               </tr>
             </thead>
             <tbody>
-              {reps.map((r, i) => {
-                const row = r as Record<string, unknown>;
-                return (
-                  <tr key={i}>
-                    <td>{String(row['type'] ?? row['representation_type'] ?? '—')}</td>
-                    <td>
-                      <span className={`badge badge-${String(row['mastery'] ?? 'unknown')}`}>
-                        {String(row['mastery'] ?? '—')}
-                      </span>
-                    </td>
-                  </tr>
-                );
-              })}
+              {reps.map((r, i) => (
+                <tr key={i}>
+                  <td>{r.type}</td>
+                  <td style={{ color: masteryColor(r.before) }}>{r.before}</td>
+                  <td style={{ color: masteryColor(r.after), fontWeight: 600 }}>{r.after}</td>
+                  <td>{(r.accuracy_score * 100).toFixed(0)}%</td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </>
@@ -56,7 +59,7 @@ export default function MasteryMap({ data }: { data: MasteryMapData }) {
           <h4 style={{ marginTop: 12 }}>Weakest links</h4>
           <ul style={{ paddingLeft: 20, fontSize: 14 }}>
             {data.weakest_links.map((w, i) => (
-              <li key={i}>{String(w)}</li>
+              <li key={i}>{w}</li>
             ))}
           </ul>
         </>
