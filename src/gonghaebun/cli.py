@@ -15,6 +15,8 @@ import argparse
 import sys
 from pathlib import Path
 
+from gonghaebun.llm.config import DEFAULT_OPENAI_MODEL
+
 
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
@@ -161,9 +163,9 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     recall_session.add_argument(
         "--model",
-        default="gpt-4o-mini",
+        default=DEFAULT_OPENAI_MODEL,
         metavar="MODEL",
-        help="LLM model ID (only used with --grader llm). (default: gpt-4o-mini)",
+        help=f"LLM model ID (only used with --grader llm). (default: {DEFAULT_OPENAI_MODEL})",
     )
     recall_session.add_argument(
         "--no-interactive",
@@ -237,9 +239,9 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     review_due.add_argument(
         "--model",
-        default="gpt-4o-mini",
+        default=DEFAULT_OPENAI_MODEL,
         metavar="MODEL",
-        help="LLM model ID (only used with --grader llm). (default: gpt-4o-mini)",
+        help=f"LLM model ID (only used with --grader llm). (default: {DEFAULT_OPENAI_MODEL})",
     )
     review_due.add_argument(
         "--no-interactive",
@@ -439,29 +441,19 @@ def _cmd_review_bank(args: argparse.Namespace) -> int:
     return 0
 
 
-def _make_grader(grader_type: str, model: str = "gpt-4o-mini"):
-    """Instantiate the requested grader. Returns an AnswerGrader."""
-    if grader_type == "self":
-        from gonghaebun.grading.self_grader import SelfGrader
-        return SelfGrader()
+def _make_grader(grader_type: str, model: str | None = None):
+    """Instantiate the requested grader. Returns an AnswerGrader.
 
-    if grader_type == "mock":
-        from gonghaebun.grading.llm_grader import LLMGrader
-        from gonghaebun.llm.mock import MockLLMClient
-        return LLMGrader(MockLLMClient())
-
-    if grader_type == "llm":
-        from gonghaebun.grading.llm_grader import LLMGrader
-        from gonghaebun.llm.errors import LLMAPIKeyError
-        from gonghaebun.llm.openai_client import OpenAIClient
-        try:
-            client = OpenAIClient(model=model)
-        except LLMAPIKeyError as exc:
-            print(f"Error: {exc}", file=sys.stderr)
-            sys.exit(2)
-        return LLMGrader(client)
-
-    raise ValueError(f"Unknown grader type: {grader_type!r}")
+    Delegates to gonghaebun.grading.factory.make_grader; handles LLMAPIKeyError
+    by printing to stderr and exiting (CLI-appropriate behaviour).
+    """
+    from gonghaebun.grading.factory import make_grader
+    from gonghaebun.llm.errors import LLMAPIKeyError
+    try:
+        return make_grader(grader_type, model)
+    except LLMAPIKeyError as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        sys.exit(2)
 
 
 def _cmd_recall_session(args: argparse.Namespace) -> int:
@@ -485,7 +477,7 @@ def _cmd_recall_session(args: argparse.Namespace) -> int:
             file=sys.stderr,
         )
 
-    grader = _make_grader(args.grader, getattr(args, "model", "gpt-4o-mini"))
+    grader = _make_grader(args.grader, getattr(args, "model", DEFAULT_OPENAI_MODEL))
 
     questions = load_recall_questions(questions_path, limit=args.limit)
     if not questions:
@@ -557,7 +549,7 @@ def _cmd_review_due(args: argparse.Namespace) -> int:
     print(f"Due concepts: {', '.join(due_concepts)}")
     print()
 
-    grader = _make_grader(args.grader, getattr(args, "model", "gpt-4o-mini"))
+    grader = _make_grader(args.grader, getattr(args, "model", DEFAULT_OPENAI_MODEL))
 
     for concept_id in due_concepts:
         # Resolve question bank path
