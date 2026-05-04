@@ -199,3 +199,16 @@ class CompileConceptResponse(BaseModel):
     misconception_count: int
     question_count: int
     bank_dir: str
+
+
+# ---------------------------------------------------------------------------
+# MVP4-G: Weakness-driven Review Loop
+# ---------------------------------------------------------------------------
+
+class WeakRepItem(BaseModel):
+    concept_id: str
+    rep_type: str           # formal | intuitive | visual | counterexample | proof_schema
+    mastery: str            # unknown | partial
+    last_reviewed: str | None   # YYYY-MM-DD or null
+    next_review: str | None     # concept-level next_review date
+    due_status: str         # overdue | due_today | upcoming | not_scheduled

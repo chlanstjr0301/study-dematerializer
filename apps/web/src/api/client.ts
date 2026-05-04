@@ -22,6 +22,7 @@ import type {
   ConceptItem,
   CompileConceptRequest,
   CompileConceptResponse,
+  WeakRepItem,
 } from './types';
 
 const BASE = '/api';
@@ -133,3 +134,10 @@ export const compileConcept = (
   req: CompileConceptRequest,
 ): Promise<CompileConceptResponse> =>
   post(`/concepts/${conceptId}/compile`, req);
+
+// ---------------------------------------------------------------------------
+// MVP4-G: Weakness-driven Review Loop
+// ---------------------------------------------------------------------------
+
+export const getWeak = (): Promise<WeakRepItem[]> =>
+  get('/weak');

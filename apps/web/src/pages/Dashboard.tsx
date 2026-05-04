@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { getHealth, getDue, getStudyMd } from '../api/client';
-import type { HealthResponse, DueConceptItem, StudyMdResponse } from '../api/types';
+import { getHealth, getDue, getStudyMd, getWeak } from '../api/client';
+import type { HealthResponse, DueConceptItem, StudyMdResponse, WeakRepItem } from '../api/types';
 import StudyMdViewer from '../components/StudyMdViewer';
 
 export default function Dashboard() {
@@ -10,6 +10,8 @@ export default function Dashboard() {
 
   const [due, setDue] = useState<DueConceptItem[] | null>(null);
   const [dueError, setDueError] = useState<string | null>(null);
+
+  const [weak, setWeak] = useState<WeakRepItem[] | null>(null);
 
   const [studyMd, setStudyMd] = useState<StudyMdResponse | null>(null);
   const [studyMdError, setStudyMdError] = useState<string | null>(null);
@@ -22,6 +24,10 @@ export default function Dashboard() {
     getDue()
       .then(setDue)
       .catch((e: unknown) => setDueError(String(e)));
+
+    getWeak()
+      .then(setWeak)
+      .catch(() => setWeak([]));   // silent — dashboard functional without this
 
     getStudyMd()
       .then(setStudyMd)
@@ -88,6 +94,48 @@ export default function Dashboard() {
           )}
         </div>
       </div>
+
+      {/* Weak Representations */}
+      {weak !== null && weak.length > 0 && (
+        <div className="section">
+          <h2>Weak Representations</h2>
+          <div className="card">
+            <table className="table-simple">
+              <thead>
+                <tr>
+                  <th>Concept</th>
+                  <th>Type</th>
+                  <th>Mastery</th>
+                  <th>Last reviewed</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {weak.map((item) => (
+                  <tr key={`${item.concept_id}-${item.rep_type}`}>
+                    <td>{item.concept_id}</td>
+                    <td><code>{item.rep_type}</code></td>
+                    <td>
+                      <span className={item.mastery === 'unknown' ? 'badge badge-overdue' : 'badge badge-partial'}>
+                        {item.mastery}
+                      </span>
+                    </td>
+                    <td>{item.last_reviewed ?? '—'}</td>
+                    <td>
+                      <Link
+                        to={`/recall?concept=${item.concept_id}&rep_type=${item.rep_type}`}
+                        className="session-link"
+                      >
+                        Strengthen →
+                      </Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {/* STUDY.md */}
       <div className="section">

@@ -10,8 +10,21 @@ import type {
   RecallFeedbackData,
 } from '../api/types';
 
+// Maps question_type → representation type — used to filter weak-only sessions
+const QUESTION_TYPE_TO_REP: Record<string, string> = {
+  definition_recall:     'formal',
+  theorem_recall:        'formal',
+  exercise_recall:       'formal',
+  intuition_recall:      'intuitive',
+  proof_schema_recall:   'proof_schema',
+  example_explanation:   'counterexample',
+  counterexample_recall: 'counterexample',
+  visual_recall:         'visual',
+};
+
 export default function RecallSession() {
   const [searchParams] = useSearchParams();
+  const repTypeFilter = searchParams.get('rep_type') ?? null;
 
   const [banks, setBanks] = useState<BankSummaryItem[] | null>(null);
   const [banksError, setBanksError] = useState<string | null>(null);
@@ -84,7 +97,7 @@ export default function RecallSession() {
       concept_id: selected,
       questions_path: `${selected}/questions.accepted.json`,
       grader: 'mock',
-      answers: questions.map((q) => ({
+      answers: displayedQuestions.map((q) => ({
         question_id: q.id,
         learner_response: answers[q.id] ?? '',
       })),
@@ -108,7 +121,14 @@ export default function RecallSession() {
       });
   }
 
-  const submitDisabled = !selected || !questions?.length || submitting;
+  // Derived: filter questions by rep_type if ?rep_type= param is present
+  const displayedQuestions: QuestionItem[] = questions
+    ? (repTypeFilter
+        ? questions.filter(q => QUESTION_TYPE_TO_REP[q.question_type] === repTypeFilter)
+        : questions)
+    : [];
+
+  const submitDisabled = !selected || displayedQuestions.length === 0 || submitting;
 
   return (
     <div>
@@ -143,15 +163,32 @@ export default function RecallSession() {
       {selected && (
         <div className="section">
           <h2>{selected}</h2>
+
+          {/* Targeting banner */}
+          {repTypeFilter && (
+            <div style={{
+              background: '#eff6ff', border: '1px solid #bfdbfe',
+              borderRadius: 6, padding: '8px 14px', marginBottom: 12,
+              fontSize: 14, color: '#1e40af',
+            }}>
+              Targeting: <strong>{repTypeFilter}</strong> representation
+            </div>
+          )}
+
           {questionsLoading ? (
             <p className="loading">Loading questions…</p>
           ) : questionsError ? (
             <p className="error-text">{questionsError}</p>
           ) : questions === null || questions.length === 0 ? (
             <p className="empty-state">No accepted questions found.</p>
+          ) : displayedQuestions.length === 0 ? (
+            <p className="empty-state">
+              No accepted questions target the <strong>{repTypeFilter}</strong> representation.
+              Use the Concept Compiler to generate and accept questions first.
+            </p>
           ) : (
             <>
-              {questions.map((q) => (
+              {displayedQuestions.map((q) => (
                 <div key={q.id} className="question-card">
                   <h3>{q.question}</h3>
                   <p className="question-meta">

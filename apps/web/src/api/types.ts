@@ -220,3 +220,16 @@ export interface CompileConceptResponse {
   question_count: number;
   bank_dir: string;
 }
+
+// ---------------------------------------------------------------------------
+// MVP4-G: Weakness-driven Review Loop
+// ---------------------------------------------------------------------------
+
+export interface WeakRepItem {
+  concept_id: string;
+  rep_type: string;           // formal | intuitive | visual | counterexample | proof_schema
+  mastery: string;            // unknown | partial
+  last_reviewed: string | null;
+  next_review: string | null;
+  due_status: string;         // overdue | due_today | upcoming | not_scheduled
+}
