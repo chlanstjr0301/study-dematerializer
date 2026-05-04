@@ -5,13 +5,19 @@ Converts AttemptResults into a StudySession, writes all session artifacts,
 and updates STUDY.md via apply_patch().
 
 Artifacts written per session (under runs/{session_id}/):
-  session.json          — StudySession fields (serialised)
-  recall_attempts.json  — list of {question_id, learner_response, grading}
-  grading_results.json  — list of GradingResult dicts
-  llm_traces.jsonl      — one JSON line per {question_id, raw_response}
-                          (only when grader_type="llm")
-  STUDY.patch.md        — from generate_patch(session)
-  session_summary.md    — human-readable summary
+  session.json              — StudySession fields (serialised)
+  recall_attempts.json      — list of {question_id, learner_response, grading}
+  grading_results.json      — list of GradingResult dicts
+  llm_traces.jsonl          — one JSON line per {question_id, raw_response}
+                              (only when grader_type="llm")
+  STUDY.patch.md            — from generate_patch(session)
+  session_summary.md        — human-readable summary
+  visualization/            — MVP3.1 visualization-ready artifacts
+    mastery_map.json        — per-concept mastery state + accuracy per rep
+    recall_feedback.json    — per-question grading with needs_human_review
+    review_queue.json       — next review date + due_status per concept
+    mastery_map.mmd         — Mermaid flowchart: concept → rep nodes
+    session_flow.mmd        — Mermaid flowchart: session pipeline
 """
 from __future__ import annotations
 
@@ -33,6 +39,7 @@ from gonghaebun.study_md.writer import (
     compute_next_review_date,
     generate_patch,
 )
+from gonghaebun.visualization.session_visualizer import write_visualization_artifacts
 
 
 def build_study_session(
@@ -203,6 +210,9 @@ def write_session_artifacts(
 
     # Update STUDY.md (backs up to .bak and validates after write)
     apply_patch(study_md_path, session)
+
+    # Write visualization artifacts (MVP3.1)
+    write_visualization_artifacts(session, attempt_results, output_dir / "visualization")
 
     return output_dir
 

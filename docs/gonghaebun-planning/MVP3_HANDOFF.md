@@ -188,3 +188,112 @@ python -m pytest tests/ -q   # 490 tests pass
 - `LLMGrader` uses a single retry; persistent network failures are not handled.
 - No `--grader llm` + `--provider` wiring beyond `openai`; other providers require a new `LLMClient` subclass.
 - STUDY.md is the sole persistent store — no query-by-date or cross-session analytics without parsing the file.
+
+---
+
+## MVP3.1 — Visualization Artifact Layer
+
+### Status: COMPLETE
+
+Added on top of the completed MVP3 engine. Does not modify grading, LLM, recall, review-due,
+or STUDY.md schema.
+
+### New Files
+
+| File | Role |
+|---|---|
+| `src/gonghaebun/visualization/__init__.py` | Package init |
+| `src/gonghaebun/visualization/session_visualizer.py` | Artifact generator |
+| `tests/test_session_visualizer.py` | ~30 tests covering JSON shape + Mermaid content |
+
+### Modified Files
+
+| File | Change |
+|---|---|
+| `study_loop/session_writer.py` | Calls `write_visualization_artifacts()` after `apply_patch()`; docstring updated |
+
+### Artifact Layout
+
+```
+runs/{session_id}/
+  ...                       (existing MVP3 artifacts)
+  visualization/
+    mastery_map.json        per-concept mastery state + accuracy per representation
+    recall_feedback.json    per-question grading (question_id, needs_human_review, etc.)
+    review_queue.json       next review date + due_status per concept
+    mastery_map.mmd         Mermaid flowchart: concept → representation nodes
+    session_flow.mmd        Mermaid flowchart: session pipeline summary
+```
+
+### JSON Shapes
+
+**mastery_map.json**
+```json
+{
+  "concept_id": "compactness",
+  "overall_mastery": "partial",
+  "representations": [
+    {"type": "formal", "before": "unknown", "after": "partial", "accuracy_score": 0.75}
+  ],
+  "weakest_links": ["formal"]
+}
+```
+- `overall_mastery`: weakest across all rep updates (unknown < partial < solid); null if no attempts
+- `weakest_links`: all reps whose `after` equals the minimum mastery level; `[]` if all solid
+
+**recall_feedback.json** — list, one entry per attempt
+```json
+[
+  {
+    "question_id": "q1",
+    "representation_type": "formal",
+    "learner_response": "...",
+    "accuracy_score": 0.75,
+    "missing_elements": [],
+    "errors": [],
+    "feedback": "...",
+    "needs_human_review": false
+  }
+]
+```
+
+**review_queue.json** — list, one entry per concept
+```json
+[
+  {
+    "concept_id": "compactness",
+    "next_review_date": "2026-01-08",
+    "weakest_representation": "formal",
+    "due_status": "upcoming"
+  }
+]
+```
+- `due_status`: `"overdue"` | `"due_today"` | `"upcoming"` (vs. `date.today()`)
+- `next_review_date`: taken from the weakest representation's `MasteryUpdate`
+- `write_visualization_artifacts()` accepts an optional `today: date | None` for test determinism
+
+### Mermaid Convention
+
+Labels use double-quoted strings with plain separators (no `\n`, no special chars) to
+stay valid without a Mermaid runtime dependency.
+
+```
+flowchart TD
+    compactness["compactness"] --> compactness_formal["formal - partial"]
+```
+
+```
+flowchart LR
+    Q["accepted_questions (3)"] --> A["recall_attempts (3)"]
+    A --> G["grading (mock)"]
+    G --> M["mastery_update (formal: partial)"]
+    M --> S["STUDY.md (updated)"]
+    S --> D["review_due (2026-01-08)"]
+```
+
+### Design Constraints Respected
+
+- No LLM calls, no grading recomputation, no STUDY.md parsing.
+- Reuses `aggregate_by_rep()` and `question_type_to_rep()` from `study_loop/mastery.py`.
+- No new runtime dependencies (stdlib only: `json`, `datetime.date`, `pathlib`).
+- All 490 existing tests continue to pass.
