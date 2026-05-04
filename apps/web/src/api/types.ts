@@ -57,3 +57,25 @@ export type RecallFeedbackData = Array<Record<string, unknown>>;
 
 // review_queue.json is a list — one entry per concept
 export type ReviewQueueData = Array<Record<string, unknown>>;
+
+// POST /api/sessions request/response
+
+export interface AnswerInput {
+  question_id: string;
+  learner_response: string;
+}
+
+export interface RunSessionRequest {
+  concept_id: string;
+  questions_path: string;
+  grader: 'mock';
+  model?: string;
+  limit?: number | null;
+  answers?: AnswerInput[];
+}
+
+export interface RunSessionResponse {
+  session_id: string;
+  summary_md: string;
+  attempt_count: number;
+}

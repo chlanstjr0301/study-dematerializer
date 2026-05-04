@@ -38,3 +38,5 @@ tmp_mvp3*/
 # Frontend build artifacts (do not commit)
 node_modules/
 apps/web/dist/
+apps/web/playwright-report/
+apps/web/test-results/

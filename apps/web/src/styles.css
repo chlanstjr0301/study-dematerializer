@@ -218,3 +218,111 @@ h4 { font-size: 14px; margin-bottom: 8px; color: #555; }
 .feedback-card dd {
   color: #222;
 }
+
+/* Recall session form */
+
+.question-card {
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-top: 3px solid #4a7aff;
+  border-radius: 8px;
+  padding: 18px 20px;
+  margin-bottom: 20px;
+}
+
+.question-card h3 {
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: #111;
+  line-height: 1.5;
+}
+
+.question-meta {
+  font-size: 12px;
+  color: #888;
+  margin-bottom: 8px;
+}
+
+.evidence-preview {
+  font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+  font-size: 12px;
+  color: #666;
+  background: #f5f5f5;
+  border-left: 3px solid #ddd;
+  padding: 6px 10px;
+  margin-bottom: 10px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.recall-textarea {
+  width: 100%;
+  min-height: 80px;
+  font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+  font-size: 13px;
+  padding: 8px 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  resize: vertical;
+  line-height: 1.5;
+  box-sizing: border-box;
+}
+
+.recall-textarea:focus {
+  outline: none;
+  border-color: #4a7aff;
+  box-shadow: 0 0 0 2px rgba(74, 122, 255, 0.15);
+}
+
+.submit-btn {
+  display: inline-block;
+  padding: 10px 24px;
+  background: #1a1a2e;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.submit-btn:hover:not(:disabled) {
+  background: #2a2a4e;
+}
+
+.submit-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.success-box {
+  background: #f0fdf4;
+  border: 1px solid #86efac;
+  border-radius: 8px;
+  padding: 20px 24px;
+  margin-top: 24px;
+}
+
+.success-box h2 {
+  color: #15803d;
+  margin-bottom: 12px;
+}
+
+.success-box .session-link {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.error-box {
+  background: #fef2f2;
+  border: 1px solid #fca5a5;
+  border-radius: 8px;
+  padding: 16px 20px;
+  margin-top: 20px;
+  color: #b91c1c;
+  font-size: 14px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
