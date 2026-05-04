@@ -1,0 +1,8 @@
+{
+  "concept_id": "connectedness",
+  "canonical_name": "Connectedness",
+  "domain": "real_analysis",
+  "aliases": ["connected", "connected set", "연결성", "connectedness"],
+  "generated_at": "2026-01-01T00:00:00Z",
+  "llm_backend": "mock"
+}

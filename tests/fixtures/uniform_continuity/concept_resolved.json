@@ -1,0 +1,8 @@
+{
+  "concept_id": "uniform_continuity",
+  "canonical_name": "Uniform Continuity",
+  "domain": "real_analysis",
+  "aliases": ["uniformly continuous", "균등 연속", "uniform_continuity"],
+  "generated_at": "2026-01-01T00:00:00Z",
+  "llm_backend": "mock"
+}

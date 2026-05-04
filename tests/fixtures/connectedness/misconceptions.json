@@ -1,0 +1,32 @@
+{
+  "concept_id": "connectedness",
+  "misconceptions": [
+    {
+      "id": "connectedness_m01",
+      "claim": "path-connected ⟹ connected, and conversely connected ⟹ path-connected",
+      "is_correct": false,
+      "counterexample": "The topologist's sine curve S = {(x, sin(1/x)) : x > 0} ∪ {(0,y) : -1 ≤ y ≤ 1} is connected but NOT path-connected: no path can join (0,0) to the oscillating part.",
+      "explanation": "Path-connectedness implies connectedness, but the converse fails. The topologist's sine curve is the standard counterexample.",
+      "checked_in_session": false,
+      "learner_was_correct": null
+    },
+    {
+      "id": "connectedness_m02",
+      "claim": "connected ⟹ simply-connected",
+      "is_correct": false,
+      "counterexample": "An annulus {(x,y) : 1 ≤ x²+y² ≤ 4} in ℝ² is connected and path-connected, but NOT simply-connected: a loop around the hole cannot be contracted to a point.",
+      "explanation": "Simply-connected is a strictly stronger property than connected. Connectedness says you can travel between any two points; simple-connectedness says every loop can be shrunk to a point. These are different topological properties.",
+      "checked_in_session": false,
+      "learner_was_correct": null
+    },
+    {
+      "id": "connectedness_m03",
+      "claim": "ℚ (the rationals) is connected in ℝ",
+      "is_correct": false,
+      "counterexample": "For any irrational c, ℚ = (ℚ ∩ (-∞,c)) ∪ (ℚ ∩ (c,∞)) is a separation into two non-empty sets, both open in the subspace topology on ℚ.",
+      "explanation": "ℚ is totally disconnected: its only connected subsets are single points. Connectedness fails dramatically here because the irrationals create gaps everywhere in ℚ.",
+      "checked_in_session": false,
+      "learner_was_correct": null
+    }
+  ]
+}

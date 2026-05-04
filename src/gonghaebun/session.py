@@ -34,25 +34,29 @@ def run_new_concept_session(
     output_dir: Path,
     study_md_path: Path,
     interactive: bool = False,
+    session_id: str | None = None,
 ) -> StudySession:
     """
     Run a full new-concept study session (Stages 0–7).
 
-    Writes all 10 artifacts to output_dir:
+    Writes all 12 artifacts to output_dir:
       1. source_manifest.json
       2. source_excerpt.md
       3. concept_decomposition.json
       4. prerequisite_graph.json
       5. representation_cards.md
-      6. self_explanation_prompt.md
-      7. diagnosis.json
-      8. recall_tasks.md
-      9. STUDY.patch.md
-      10. session.json
+      6. representation_set.json
+      7. self_explanation_prompt.md
+      8. diagnosis.json
+      9. recall_tasks.md
+      10. recall_tasks.json
+      11. STUDY.patch.md
+      12. session.json
 
+    If session_id is provided it is used as-is; otherwise a new UUID is generated.
     Returns the finalized StudySession.
     """
-    session_id = str(uuid.uuid4())
+    session_id = session_id or str(uuid.uuid4())
     started_at = datetime.now(timezone.utc).isoformat()
     output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -130,6 +134,20 @@ def run_new_concept_session(
     cards_md = render_representation_cards(rep_set)
     (output_dir / "representation_cards.md").write_text(cards_md, encoding="utf-8")
 
+    rep_set_data = {
+        rep.type: {
+            "type": rep.type,
+            "content": rep.content,
+            "mastery_state": rep.mastery_state,
+            "last_reviewed": rep.last_reviewed,
+        }
+        for rep in rep_set.as_list()
+    }
+    (output_dir / "representation_set.json").write_text(
+        json.dumps(rep_set_data, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+
     # ------------------------------------------------------------------
     # Stage 5 (template only): Self-Explanation Prompt
     # ------------------------------------------------------------------
@@ -162,6 +180,10 @@ def run_new_concept_session(
     )
     recall_md = render_recall_tasks(tasks_data)
     (output_dir / "recall_tasks.md").write_text(recall_md, encoding="utf-8")
+    (output_dir / "recall_tasks.json").write_text(
+        json.dumps(tasks_data, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
 
     # ------------------------------------------------------------------
     # Build mastery updates (one per representation type, from recall tasks)

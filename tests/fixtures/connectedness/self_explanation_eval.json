@@ -1,0 +1,6 @@
+{
+  "accuracy_score": 0.65,
+  "missing_elements": ["the clopen characterization was not mentioned", "separation must satisfy A ∩ cl(B) = ∅ AND cl(A) ∩ B = ∅, not just disjointness"],
+  "errors": [],
+  "feedback": "Good — you captured the single-piece intuition and the basic definition. To sharpen your answer: state the separation conditions precisely (closure conditions, not just disjointness) and mention the equivalent clopen characterization, which is often more convenient in proofs."
+}

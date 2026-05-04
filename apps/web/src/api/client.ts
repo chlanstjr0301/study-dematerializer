@@ -19,6 +19,9 @@ import type {
   ReviewBankRequest,
   ReviewBankResponse,
   ExportAcceptedResponse,
+  ConceptItem,
+  CompileConceptRequest,
+  CompileConceptResponse,
 } from './types';
 
 const BASE = '/api';
@@ -117,3 +120,16 @@ export const reviewBank = (
 
 export const exportAccepted = (id: string): Promise<ExportAcceptedResponse> =>
   post(`/banks/${id}/export-accepted`, {});
+
+// ---------------------------------------------------------------------------
+// MVP4-G0: Concept Compiler
+// ---------------------------------------------------------------------------
+
+export const getConcepts = (): Promise<ConceptItem[]> =>
+  get('/concepts');
+
+export const compileConcept = (
+  conceptId: string,
+  req: CompileConceptRequest,
+): Promise<CompileConceptResponse> =>
+  post(`/concepts/${conceptId}/compile`, req);

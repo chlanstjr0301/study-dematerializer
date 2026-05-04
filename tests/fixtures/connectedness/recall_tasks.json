@@ -1,0 +1,30 @@
+{
+  "concept_id": "connectedness",
+  "mastery_state": "unknown",
+  "tasks": [
+    {
+      "id": "recall_01",
+      "type": "definition_recall",
+      "prompt": "Without looking at any notes: state the definition of connectedness in a metric space, including the equivalent clopen characterization.",
+      "hint": null
+    },
+    {
+      "id": "recall_02",
+      "type": "counterexample_recall",
+      "prompt": "Give one example of a set that is NOT connected, and explicitly name the separation that witnesses disconnectedness.",
+      "hint": null
+    },
+    {
+      "id": "recall_03",
+      "type": "intuition_recall",
+      "prompt": "In one or two sentences, explain the intuition behind connectedness without using the word 'clopen'.",
+      "hint": null
+    },
+    {
+      "id": "recall_04",
+      "type": "proof_schema_recall",
+      "prompt": "What is the standard first step when proving that a set E is connected by contradiction?",
+      "hint": null
+    }
+  ]
+}

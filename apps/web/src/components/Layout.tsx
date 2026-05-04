@@ -10,6 +10,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         <Link to="/sessions">Sessions</Link>
         <Link to="/recall">Recall</Link>
         <Link to="/sources">Sources</Link>
+        <Link to="/concepts">Concepts</Link>
       </nav>
       <main className="layout-content">{children}</main>
     </>

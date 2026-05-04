@@ -1,0 +1,32 @@
+{
+  "formal": {
+    "type": "formal",
+    "content": "**Definition (Connectedness).** A metric space $(X, d)$ is *connected* if it cannot be written as a union of two disjoint, non-empty open sets. Equivalently, $X$ is connected if and only if the only subsets of $X$ that are both open and closed (clopen) are $\\emptyset$ and $X$ itself.\n\nA subset $E \\subseteq X$ is connected if $E$, viewed as a metric subspace, is connected.\n\n**Separation:** A *separation* of $E$ is a pair of non-empty sets $A, B$ such that $E = A \\cup B$, $A \\cap \\bar{B} = \\emptyset$, and $\\bar{A} \\cap B = \\emptyset$ (where $\\bar{\\cdot}$ denotes closure in $E$). $E$ is connected if and only if no separation exists.\n\n**Path-connectedness:** $E$ is *path-connected* if for every $x, y \\in E$ there exists a continuous $\\gamma: [0,1] \\to E$ with $\\gamma(0) = x$, $\\gamma(1) = y$. Path-connected $\\Rightarrow$ connected; the converse fails in general.",
+    "mastery_state": "unknown",
+    "last_reviewed": null
+  },
+  "intuitive": {
+    "type": "intuitive",
+    "content": "**Intuition for Connectedness.**\n\nA connected set is one you can draw in a single stroke without lifting your pen. There is no 'gap' that separates the set into isolated pieces.\n\nThink of it this way: if you stand anywhere in a connected set, you can reach any other point by a path that stays inside the set — at least in nice cases (this is path-connectedness, which is slightly stronger but usually the right image).\n\n**Key contrast:** The set $\\{0\\} \\cup \\{1\\}$ in $\\mathbb{R}$ is NOT connected — it is two isolated points. The interval $[0,1]$ IS connected — you can travel continuously from 0 to 1.\n\n**Why it matters:** The Intermediate Value Theorem holds precisely because $[a, b]$ is connected: a continuous function cannot 'jump' from one value to another without hitting every value in between.",
+    "mastery_state": "unknown",
+    "last_reviewed": null
+  },
+  "visual": {
+    "type": "visual",
+    "content": "**Visual Description: Connected vs. Disconnected Sets**\n\nConnected:\n```\n  [────────────────]   one piece, interval [0,1]\n  ●────●────●────●     path-connected curve\n```\n\nDisconnected:\n```\n  [───]   [───]        two disjoint intervals — gap in between\n  ●         ●          two isolated points {0} ∪ {1}\n```\n\n**Clopen intuition:** In a connected space, no set can be 'detached' — every non-empty proper subset has points on its boundary (so cannot be both open and closed simultaneously).\n\n**Mnemonic:** Connected = one piece, Disconnected = gap.",
+    "mastery_state": "unknown",
+    "last_reviewed": null
+  },
+  "counterexample": {
+    "type": "counterexample",
+    "content": "**Counterexamples: What Is NOT Connected**\n\n1. **$\\{0\\} \\cup \\{1\\} \\subset \\mathbb{R}$** — Two isolated points. Separation: $A = \\{0\\}$, $B = \\{1\\}$, both open in the subspace. This is the simplest disconnected set.\n\n2. **$\\mathbb{Q}$ (rationals)** — Disconnected in $\\mathbb{R}$. Take any irrational $c$; then $\\mathbb{Q} = (\\mathbb{Q} \\cap (-\\infty, c)) \\cup (\\mathbb{Q} \\cap (c, \\infty))$ is a separation.\n\n3. **The topologist's sine curve $S$** — Connected but NOT path-connected. $S = \\{(x, \\sin(1/x)) : x > 0\\} \\cup \\{(0, y) : -1 \\leq y \\leq 1\\}$. No path joins $(0,0)$ to the oscillating part.\n\n4. **Path-connected does NOT imply compact** — $\\mathbb{R}$ is path-connected but not compact.",
+    "mastery_state": "unknown",
+    "last_reviewed": null
+  },
+  "proof_schema": {
+    "type": "proof_schema",
+    "content": "**Proof Schema: 'E is connected'**\n\n**Goal:** Show that $E$ admits no separation.\n\n**Standard strategy:**\n1. Assume for contradiction that $E = A \\cup B$ is a separation ($A, B$ non-empty, $A \\cap \\bar{B} = \\emptyset$, $\\bar{A} \\cap B = \\emptyset$).\n2. Derive a contradiction (e.g., use the Intermediate Value Theorem, or show one of $A, B$ must be empty).\n\n**Alternative (clopen argument):**\n1. Suppose $U \\subseteq E$ is clopen and non-empty.\n2. Show $U = E$ (so no proper clopen subset exists).\n\n**Common sub-patterns:**\n- Image of connected set under continuous map is connected.\n- Union of connected sets sharing a common point is connected.\n- $[a,b] \\subset \\mathbb{R}$ is connected (proved via the least-upper-bound property).\n\n**Common pitfall:** Confusing path-connected with connected; assuming connected implies simply-connected.",
+    "mastery_state": "unknown",
+    "last_reviewed": null
+  }
+}

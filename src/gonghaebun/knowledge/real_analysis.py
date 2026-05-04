@@ -1,8 +1,7 @@
 """
-Hardcoded knowledge base for Real Analysis — MVP 1 (compactness only).
+Hardcoded knowledge base for Real Analysis — MVP4-G0 (3 seed concepts).
 
-Future concepts (connectedness, uniform_continuity) are listed as stubs
-in PREREQUISITE_EDGES but have no Concept entries yet.
+Seed concepts: compactness, connectedness, uniform_continuity.
 """
 from __future__ import annotations
 from gonghaebun.models.concept import Concept
@@ -25,7 +24,29 @@ CONCEPTS: dict[str, Concept] = {
             "sequential_compactness",
         ],
     ),
-    # Prerequisite stubs (no full Concept entry — used only for graph nodes)
+    # ---------------------------------------------------------------------------
+    # Seed concept: connectedness
+    # ---------------------------------------------------------------------------
+    "connectedness": Concept(
+        concept_id="connectedness",
+        canonical_name="Connectedness",
+        domain="real_analysis",
+        aliases=["connected", "connected set", "연결성", "connectedness"],
+        prerequisites=["open_set", "metric_space"],
+    ),
+    # ---------------------------------------------------------------------------
+    # Seed concept: uniform_continuity
+    # ---------------------------------------------------------------------------
+    "uniform_continuity": Concept(
+        concept_id="uniform_continuity",
+        canonical_name="Uniform Continuity",
+        domain="real_analysis",
+        aliases=["uniformly continuous", "균등 연속", "uniform_continuity"],
+        prerequisites=["continuity", "metric_space", "compactness"],
+    ),
+    # ---------------------------------------------------------------------------
+    # Prerequisite stubs (used only for graph nodes)
+    # ---------------------------------------------------------------------------
     "metric_space": Concept(
         concept_id="metric_space",
         canonical_name="Metric Space",
@@ -56,6 +77,18 @@ CONCEPTS: dict[str, Concept] = {
         domain="real_analysis",
         aliases=["수열 옹골성", "sequentially compact"],
     ),
+    "continuity": Concept(
+        concept_id="continuity",
+        canonical_name="Continuity",
+        domain="real_analysis",
+        aliases=["continuous", "연속", "continuity"],
+    ),
+    "path_connected": Concept(
+        concept_id="path_connected",
+        canonical_name="Path Connectedness",
+        domain="real_analysis",
+        aliases=["path-connected", "경로 연결"],
+    ),
 }
 
 # ---------------------------------------------------------------------------
@@ -70,13 +103,14 @@ PREREQUISITE_EDGES: dict[str, list[str]] = {
         "heine_borel",
         "sequential_compactness",
     ],
+    "connectedness": ["open_set", "metric_space"],
+    "uniform_continuity": ["continuity", "metric_space", "compactness"],
     "open_cover": ["open_set"],
     "heine_borel": ["open_cover", "metric_space"],
     "sequential_compactness": ["metric_space"],
     "open_set": ["metric_space"],
-    # Future
-    # "connectedness": ["open_set"],
-    # "uniform_continuity": ["compactness", "pointwise_continuity"],
+    "continuity": ["metric_space"],
+    "path_connected": ["connectedness"],
 }
 
 # ---------------------------------------------------------------------------
@@ -95,6 +129,28 @@ CONCEPT_KEYWORDS: dict[str, list[str]] = {
         "perfect",
         "connected",
         "cover",
+    ],
+    "connectedness": [
+        "connected",
+        "connectedness",
+        "path-connected",
+        "separated",
+        "disconnected",
+        "path",
+        "component",
+        "clopen",
+        "intermediate value",
+        "separation",
+    ],
+    "uniform_continuity": [
+        "uniform continuity",
+        "uniformly continuous",
+        "modulus of continuity",
+        "Cantor theorem",
+        "epsilon",
+        "delta",
+        "equicontinuous",
+        "compact",
     ],
 }
 

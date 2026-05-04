@@ -7,6 +7,7 @@ import SessionDetail from './pages/SessionDetail';
 import RecallSession from './pages/RecallSession';
 import SourceUpload from './pages/SourceUpload';
 import BankReview from './pages/BankReview';
+import ConceptCompiler from './pages/ConceptCompiler';
 
 export default function App() {
   return (
@@ -20,6 +21,7 @@ export default function App() {
           <Route path="/recall" element={<RecallSession />} />
           <Route path="/sources" element={<SourceUpload />} />
           <Route path="/review/:conceptId" element={<BankReview />} />
+          <Route path="/concepts" element={<ConceptCompiler />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Layout>

@@ -1,0 +1,32 @@
+{
+  "formal": {
+    "type": "formal",
+    "content": "**Definition (Uniform Continuity).** A function $f: (X, d_X) \\to (Y, d_Y)$ between metric spaces is *uniformly continuous* if for every $\\varepsilon > 0$ there exists $\\delta > 0$ such that for ALL $x, x' \\in X$:\n$$d_X(x, x') < \\delta \\implies d_Y(f(x), f(x')) < \\varepsilon.$$\n\n**Contrast with pointwise continuity:** In pointwise continuity, $\\delta$ may depend on both $\\varepsilon$ and the base point $x$. In uniform continuity, the same $\\delta$ works simultaneously for every pair of points in $X$.\n\n**Cantor's Theorem:** If $f: K \\to Y$ is continuous and $K$ is compact, then $f$ is uniformly continuous.\n\n**Lipschitz condition:** $f$ is Lipschitz with constant $L$ if $d_Y(f(x), f(x')) \\leq L \\cdot d_X(x, x')$ for all $x, x'$. Lipschitz $\\Rightarrow$ uniformly continuous; the converse fails ($f(x) = \\sqrt{x}$ on $[0,1]$ is uniformly continuous but not Lipschitz at 0).",
+    "mastery_state": "unknown",
+    "last_reviewed": null
+  },
+  "intuitive": {
+    "type": "intuitive",
+    "content": "**Intuition for Uniform Continuity.**\n\nOrdinary continuity says: for each point, small changes in input give small changes in output. But the 'how small' can vary from point to point — some regions of the domain may require much tinier steps.\n\nUniform continuity says: there is a single $\\delta$ that works everywhere at once. No matter where you stand on the domain, a step of size $\\delta$ always moves the output by less than $\\varepsilon$.\n\n**Analogy:** Imagine walking on terrain. Pointwise continuity lets the slope vary wildly — some regions are gentle, others nearly vertical. Uniform continuity bounds the slope globally: no spot is arbitrarily steep.\n\n**Key example:** $f(x) = 1/x$ on $(0,1)$ is continuous but NOT uniformly continuous — near $x=0$ the function shoots up arbitrarily fast, so no single $\\delta$ suffices. But $f(x) = 1/x$ on $[1, \\infty)$ IS uniformly continuous — far from 0, the slope is bounded.\n\n**Why compactness helps:** On a compact domain, the function cannot have arbitrarily steep regions (it would have to attain its extremes), so uniform continuity is automatic — this is Cantor's Theorem.",
+    "mastery_state": "unknown",
+    "last_reviewed": null
+  },
+  "visual": {
+    "type": "visual",
+    "content": "**Visual Description: Uniform vs. Pointwise Continuity**\n\nPointwise continuity (δ depends on x):\n```\n   f(x)\n   │        /  ← steep near 0: needs tiny δ\n   │      /\n   │    /\n   │──/──────────────  ← gentle far from 0: large δ OK\n   └──────────────── x\n      0   1   2   3\n```\n\nUniform continuity (one δ for all x):\n```\n   f(x)\n   │  /  /  /  /   ← same slope everywhere\n   │ /  /  /  /    ← one δ-band fits all points\n   │/──/──/──/────\n   └──────────── x\n```\n\n**The δ-band test:** Draw a horizontal strip of height 2ε around f(x). Uniform continuity means you can find a single vertical strip of width 2δ that, for any center x, keeps the graph inside the horizontal strip.",
+    "mastery_state": "unknown",
+    "last_reviewed": null
+  },
+  "counterexample": {
+    "type": "counterexample",
+    "content": "**Counterexamples: Continuous but NOT Uniformly Continuous**\n\n1. **$f(x) = 1/x$ on $(0,1)$** — As $x \\to 0^+$, the function grows without bound. For any $\\delta > 0$, take $x = \\delta/2$ and $x' = \\delta/4$; then $|x - x'| < \\delta$ but $|f(x) - f(x')| = 2/\\delta - 4/\\delta = $ can be made large. No single $\\delta$ works near $0$.\n\n2. **$f(x) = x^2$ on $\\mathbb{R}$** — For $\\varepsilon = 1$: $|x^2 - y^2| = |x+y||x-y|$. For large $x, y$ with $|x-y| < \\delta$, the factor $|x+y|$ can be arbitrarily large, so no single $\\delta$ suffices for all of $\\mathbb{R}$.\n\n3. **$f(x) = \\sin(1/x)$ on $(0,1]$** — Oscillates infinitely fast near $0$; same issue as $1/x$ for the modulus of continuity.\n\n**Contrast (uniformly continuous):**\n- $f(x) = \\sqrt{x}$ on $[0,1]$: continuous on compact set $\\Rightarrow$ uniformly continuous (Cantor's Theorem).\n- $f(x) = x^2$ on $[0, M]$ for any fixed $M$: compact domain forces uniform continuity.\n- Every Lipschitz function is uniformly continuous.",
+    "mastery_state": "unknown",
+    "last_reviewed": null
+  },
+  "proof_schema": {
+    "type": "proof_schema",
+    "content": "**Proof Schema: 'f is uniformly continuous'**\n\n**Goal:** Show $\\forall \\varepsilon > 0, \\exists \\delta > 0$ such that $d_X(x,x') < \\delta \\Rightarrow d_Y(f(x), f(x')) < \\varepsilon$ for ALL $x, x' \\in X$.\n\n**Direct construction strategy:**\n1. Fix $\\varepsilon > 0$.\n2. Find a $\\delta$ (possibly depending on $\\varepsilon$ but NOT on $x$) by explicit formula or by invoking a theorem.\n3. For arbitrary $x, x'$ with $d_X(x,x') < \\delta$, estimate $d_Y(f(x), f(x')) < \\varepsilon$.\n\n**Via Cantor's Theorem (when domain is compact):**\n1. State: $f$ is continuous on compact $K$.\n2. Apply Cantor's Theorem: $f$ is uniformly continuous on $K$. (No $\\varepsilon$-$\\delta$ chase needed.)\n\n**Contradiction strategy (showing NOT uniformly continuous):**\n1. Exhibit $\\varepsilon_0 > 0$ and sequences $x_n, x_n'$ with $d_X(x_n, x_n') \\to 0$ but $d_Y(f(x_n), f(x_n')) \\geq \\varepsilon_0$.\n\n**Common sub-patterns:**\n- Lipschitz: set $\\delta = \\varepsilon / L$.\n- Hölder: set $\\delta = (\\varepsilon / C)^{1/\\alpha}$.\n- Compact + continuous: cite Cantor's Theorem directly.\n\n**Common pitfall:** Choosing $\\delta$ that secretly depends on $x$ — this proves only pointwise continuity, not uniform continuity.",
+    "mastery_state": "unknown",
+    "last_reviewed": null
+  }
+}

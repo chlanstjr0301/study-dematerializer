@@ -7,8 +7,21 @@ learner responses are collected.
 """
 from __future__ import annotations
 
+import hashlib
+from datetime import datetime, timezone
+
 from gonghaebun.llm.base import LLMClient
+from gonghaebun.models.question_bank import Evidence, Question
 from gonghaebun.prompts import load_prompt
+
+# Maps recall task type → representation type key in representation_set.json
+TASK_TYPE_TO_REP: dict[str, str] = {
+    "definition_recall": "formal",
+    "counterexample_recall": "counterexample",
+    "intuition_recall": "intuitive",
+    "proof_schema_recall": "proof_schema",
+    "visual_recall": "visual",
+}
 
 
 def generate_recall_tasks(
@@ -61,3 +74,63 @@ def render_recall_tasks(tasks_data: dict) -> str:
         ]
 
     return "\n".join(lines)
+
+
+def convert_tasks_to_questions(
+    tasks_data: dict,
+    rep_set_data: dict,
+    concept_id: str,
+) -> list[Question]:
+    """
+    Convert recall_tasks dict + representation_set dict → list[Question].
+
+    Each task becomes one Question:
+    - question_id: f"q_compiler_{concept_id}_{task_id}"
+    - question:    task["prompt"]
+    - question_type: task["type"]
+    - expected_answer: representation content for that type (capped at 800 chars)
+    - status: "candidate"
+    - difficulty: "hard" for proof_schema_recall, "medium" otherwise
+    """
+    now = datetime.now(timezone.utc).isoformat()
+    questions: list[Question] = []
+
+    for task in tasks_data.get("tasks", []):
+        task_id = task.get("id", "")
+        task_type = task.get("type", "")
+        prompt = task.get("prompt", "")
+
+        rep_key = TASK_TYPE_TO_REP.get(task_type, "formal")
+        rep_entry = rep_set_data.get(rep_key, {})
+        rep_content = rep_entry.get("content", "") if isinstance(rep_entry, dict) else ""
+        expected = rep_content[:800]
+
+        difficulty = "hard" if task_type == "proof_schema_recall" else "medium"
+
+        text_hash = hashlib.sha256(rep_content.encode("utf-8")).hexdigest()
+        evidence = Evidence(
+            source_text=expected or prompt[:800],
+            source_file=f"representation_set.json#{rep_key}",
+            start_line=None,
+            end_line=None,
+            text_hash=text_hash,
+        )
+
+        questions.append(
+            Question(
+                question_id=f"q_compiler_{concept_id}_{task_id}",
+                document_id=concept_id,
+                source_block_id=f"{concept_id}_{rep_key}",
+                question_type=task_type,
+                difficulty=difficulty,
+                question=prompt,
+                expected_answer=expected or prompt[:800],
+                evidence=evidence,
+                rule_id="compiler_representation",
+                status="candidate",
+                created_at=now,
+                updated_at=now,
+            )
+        )
+
+    return questions

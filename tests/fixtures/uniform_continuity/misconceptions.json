@@ -1,0 +1,32 @@
+{
+  "concept_id": "uniform_continuity",
+  "misconceptions": [
+    {
+      "id": "uniform_continuity_m01",
+      "claim": "pointwise continuity on an open interval ⟹ uniform continuity",
+      "is_correct": false,
+      "counterexample": "f(x) = 1/x is continuous on (0,1) but NOT uniformly continuous: for any δ > 0 and small x near 0, |f(x) - f(x+δ/2)| can exceed any fixed ε.",
+      "explanation": "Uniform continuity requires one δ to work for all pairs of points. On an open (non-compact) interval, the function can 'speed up' near the boundary, breaking uniform continuity.",
+      "checked_in_session": false,
+      "learner_was_correct": null
+    },
+    {
+      "id": "uniform_continuity_m02",
+      "claim": "uniform continuity ⟹ differentiable (or Lipschitz)",
+      "is_correct": false,
+      "counterexample": "f(x) = √x on [0,1] is uniformly continuous (compact domain, continuous) but NOT Lipschitz at 0: |f(x) - f(0)| / |x - 0| = 1/√x → ∞ as x → 0⁺.",
+      "explanation": "Uniform continuity is weaker than Lipschitz continuity. A Lipschitz constant bounds the ratio Δf/Δx; uniform continuity only bounds Δf given Δx → 0 uniformly, with no rate requirement.",
+      "checked_in_session": false,
+      "learner_was_correct": null
+    },
+    {
+      "id": "uniform_continuity_m03",
+      "claim": "continuous on a compact set does NOT imply uniform continuity — you still need to check the ε-δ condition globally",
+      "is_correct": false,
+      "counterexample": "Any continuous f: [a,b] → ℝ is uniformly continuous — this is exactly Cantor's Theorem (also called the Heine-Cantor theorem). No additional ε-δ verification is needed.",
+      "explanation": "Cantor's Theorem guarantees that continuity on a compact metric space automatically upgrades to uniform continuity. This is one of the most powerful uses of compactness in analysis.",
+      "checked_in_session": false,
+      "learner_was_correct": null
+    }
+  ]
+}

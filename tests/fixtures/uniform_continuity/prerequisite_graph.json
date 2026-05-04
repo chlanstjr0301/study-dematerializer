@@ -1,0 +1,16 @@
+{
+  "root_concept_id": "uniform_continuity",
+  "generated_at": "2026-01-01T00:00:00Z",
+  "nodes": [
+    {"concept_id": "continuity", "canonical_name": "Continuity", "depth": 1, "mastery_state": "unknown"},
+    {"concept_id": "metric_space", "canonical_name": "Metric Space", "depth": 1, "mastery_state": "unknown"},
+    {"concept_id": "compactness", "canonical_name": "Compactness", "depth": 1, "mastery_state": "unknown"}
+  ],
+  "edges": [
+    {"from": "continuity", "to": "uniform_continuity"},
+    {"from": "metric_space", "to": "uniform_continuity"},
+    {"from": "compactness", "to": "uniform_continuity"},
+    {"from": "metric_space", "to": "continuity"},
+    {"from": "metric_space", "to": "compactness"}
+  ]
+}

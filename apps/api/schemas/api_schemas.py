@@ -172,3 +172,30 @@ class ReviewBankResponse(BaseModel):
 
 class ExportAcceptedResponse(BaseModel):
     accepted_count: int
+
+
+# ---------------------------------------------------------------------------
+# MVP4-G0: Concept Compiler
+# ---------------------------------------------------------------------------
+
+class ConceptItem(BaseModel):
+    concept_id: str
+    canonical_name: str
+    domain: str
+    prerequisites: list[str]
+
+
+class CompileConceptRequest(BaseModel):
+    source_relative_path: str
+    document_id: str
+    grader: Literal["mock"] = "mock"
+
+
+class CompileConceptResponse(BaseModel):
+    session_id: str
+    concept_id: str
+    representation_count: int
+    prerequisite_count: int
+    misconception_count: int
+    question_count: int
+    bank_dir: str

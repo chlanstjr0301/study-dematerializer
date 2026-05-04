@@ -1,0 +1,30 @@
+{
+  "concept_id": "uniform_continuity",
+  "mastery_state": "unknown",
+  "tasks": [
+    {
+      "id": "recall_01",
+      "type": "definition_recall",
+      "prompt": "Without looking at any notes: state the definition of uniform continuity. Make explicit how it differs from pointwise continuity.",
+      "hint": null
+    },
+    {
+      "id": "recall_02",
+      "type": "counterexample_recall",
+      "prompt": "Give one example of a function that is continuous but NOT uniformly continuous, and briefly explain why no single δ suffices.",
+      "hint": null
+    },
+    {
+      "id": "recall_03",
+      "type": "intuition_recall",
+      "prompt": "In one or two sentences, explain the intuition behind uniform continuity without using the symbols ε or δ.",
+      "hint": null
+    },
+    {
+      "id": "recall_04",
+      "type": "proof_schema_recall",
+      "prompt": "State Cantor's Theorem for uniform continuity. What are its hypotheses and conclusion?",
+      "hint": null
+    }
+  ]
+}

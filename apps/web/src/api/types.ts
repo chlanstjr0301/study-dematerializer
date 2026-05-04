@@ -193,3 +193,30 @@ export interface ReviewBankResponse {
 export interface ExportAcceptedResponse {
   accepted_count: number;
 }
+
+// ---------------------------------------------------------------------------
+// MVP4-G0: Concept Compiler
+// ---------------------------------------------------------------------------
+
+export interface ConceptItem {
+  concept_id: string;
+  canonical_name: string;
+  domain: string;
+  prerequisites: string[];
+}
+
+export interface CompileConceptRequest {
+  source_relative_path: string;
+  document_id: string;
+  grader?: 'mock';
+}
+
+export interface CompileConceptResponse {
+  session_id: string;
+  concept_id: string;
+  representation_count: number;
+  prerequisite_count: number;
+  misconception_count: number;
+  question_count: number;
+  bank_dir: string;
+}

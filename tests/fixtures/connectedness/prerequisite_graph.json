@@ -1,0 +1,13 @@
+{
+  "root_concept_id": "connectedness",
+  "generated_at": "2026-01-01T00:00:00Z",
+  "nodes": [
+    {"concept_id": "open_set", "canonical_name": "Open Set", "depth": 1, "mastery_state": "unknown"},
+    {"concept_id": "metric_space", "canonical_name": "Metric Space", "depth": 1, "mastery_state": "unknown"}
+  ],
+  "edges": [
+    {"from": "open_set", "to": "connectedness"},
+    {"from": "metric_space", "to": "connectedness"},
+    {"from": "metric_space", "to": "open_set"}
+  ]
+}

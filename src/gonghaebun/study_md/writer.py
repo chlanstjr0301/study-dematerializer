@@ -209,3 +209,62 @@ def _write_study_md(path: Path, records: dict[str, ConceptRecord]) -> None:
         lines.append("")
 
     path.write_text("\n".join(lines), encoding="utf-8")
+
+
+def apply_concept_compiler_patch(
+    study_md_path: Path,
+    concept_id: str,
+    prerequisite_graph_data: dict,
+    diagnosis_data: dict,
+) -> None:
+    """
+    Add prerequisites and misconceptions from concept compiler artifacts to STUDY.md.
+
+    Reads prerequisite_graph_data["nodes"] (excluding root, depth=0) to populate
+    the Prerequisites table.  Merges diagnosis_data["misconceptions"] (union by claim;
+    existing confirmed flags are preserved).
+
+    Backs up existing STUDY.md before writing.
+    """
+    from gonghaebun.study_md.parser import PrerequisiteRecord, MisconceptionRecord
+
+    study_md_path.parent.mkdir(parents=True, exist_ok=True)
+
+    if study_md_path.exists():
+        shutil.copy2(study_md_path, study_md_path.with_suffix(".bak"))
+
+    records = parse_study_md(study_md_path)
+    if concept_id not in records:
+        records[concept_id] = ConceptRecord(concept_id=concept_id)
+
+    record = records[concept_id]
+
+    # -- Prerequisites ---------------------------------------------------
+    new_prereqs: list[PrerequisiteRecord] = []
+    for node in prerequisite_graph_data.get("nodes", []):
+        if node.get("concept_id") == concept_id:
+            continue  # skip root node
+        new_prereqs.append(
+            PrerequisiteRecord(
+                concept=node["concept_id"],
+                mastery=node.get("mastery_state", "unknown"),
+                note="",
+            )
+        )
+    # Replace wholesale (concept compiler is authoritative for prereqs)
+    if new_prereqs:
+        record.prerequisites = new_prereqs
+
+    # -- Misconceptions (merge, no duplicates by claim text) -------------
+    existing_claims = {m.claim for m in record.misconceptions}
+    for m_raw in diagnosis_data.get("misconceptions", []):
+        claim = m_raw.get("claim", "")
+        if not claim or claim in existing_claims:
+            continue
+        record.misconceptions.append(
+            MisconceptionRecord(claim=claim, confirmed=False, note="")
+        )
+        existing_claims.add(claim)
+
+    _write_study_md(study_md_path, records)
+    validate_study_md(study_md_path)
