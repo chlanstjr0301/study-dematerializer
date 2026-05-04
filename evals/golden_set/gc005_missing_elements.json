@@ -1,0 +1,22 @@
+{
+  "id": "gc005",
+  "description": "Incomplete answer — grader must populate missing_elements with terms grounded in expected_answer",
+  "dimensions": ["missing_elements_overlap"],
+  "grader_input": {
+    "question": "State the definition of compactness.",
+    "expected_answer": "A set K is compact if every open cover of K has a finite subcover.",
+    "evidence_text": "A set K is compact if every open cover of K has a finite subcover.",
+    "learner_response": "A compact set has special properties related to covers."
+  },
+  "simulated_grading_response": "{\"accuracy_score\": 0.15, \"missing_elements\": [\"open cover\", \"finite subcover\", \"formal definition of compact\"], \"errors\": [], \"feedback\": \"Answer is too vague. Missing the key formal terms.\", \"mastery_suggestion\": \"unknown\", \"confidence\": 0.88, \"needs_human_review\": false, \"evidence_alignment\": \"partially_supported\"}",
+  "expected": {
+    "schema_valid": true,
+    "accuracy_min": null,
+    "accuracy_max": 0.49,
+    "mastery_suggestion": null,
+    "errors_nonempty": null,
+    "missing_elements_nonempty": true,
+    "needs_human_review": null,
+    "raises_error": false
+  }
+}

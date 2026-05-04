@@ -1,0 +1,22 @@
+{
+  "id": "gc002",
+  "description": "Partial compactness recall — grader must return partial mastery with missing elements",
+  "dimensions": ["schema_parse"],
+  "grader_input": {
+    "question": "State the definition of compactness.",
+    "expected_answer": "A set K is compact if every open cover of K has a finite subcover.",
+    "evidence_text": "A set K is compact if every open cover of K has a finite subcover.",
+    "learner_response": "K is compact when it can be covered by finitely many sets."
+  },
+  "simulated_grading_response": "{\"accuracy_score\": 0.62, \"missing_elements\": [\"open cover requirement\", \"finite subcover from any open cover\"], \"errors\": [], \"feedback\": \"Captures the spirit but misses the formal structure.\", \"mastery_suggestion\": \"partial\", \"confidence\": 0.9, \"needs_human_review\": false, \"evidence_alignment\": \"partially_supported\"}",
+  "expected": {
+    "schema_valid": true,
+    "accuracy_min": 0.50,
+    "accuracy_max": 0.84,
+    "mastery_suggestion": "partial",
+    "errors_nonempty": false,
+    "missing_elements_nonempty": true,
+    "needs_human_review": false,
+    "raises_error": false
+  }
+}

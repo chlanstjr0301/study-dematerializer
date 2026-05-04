@@ -12,6 +12,8 @@ __pycache__/
 .venv/
 venv/
 .env
+.env.*
+!.env.example
 *.egg-info/
 dist/
 build/
@@ -28,3 +30,7 @@ tmp_STUDY.md
 
 tmp_runs/
 tmp_runs
+
+# Eval framework runtime outputs (do not commit)
+evals/runs/
+tmp_mvp3*/

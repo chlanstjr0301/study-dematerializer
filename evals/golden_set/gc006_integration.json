@@ -1,0 +1,6 @@
+{
+  "id": "gc006",
+  "description": "Integration test: STUDY.md roundtrip + visualization artifact sanity",
+  "dimensions": ["study_md_roundtrip", "visualization_sanity"],
+  "type": "integration"
+}

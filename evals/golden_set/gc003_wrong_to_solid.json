@@ -1,0 +1,22 @@
+{
+  "id": "gc003",
+  "description": "Wrong answer — grader must NOT rate this as solid (wrong_to_solid prevention)",
+  "dimensions": ["wrong_to_solid"],
+  "grader_input": {
+    "question": "State the definition of compactness.",
+    "expected_answer": "A set K is compact if every open cover of K has a finite subcover.",
+    "evidence_text": "A set K is compact if every open cover of K has a finite subcover.",
+    "learner_response": "A compact set is a set that is closed and bounded."
+  },
+  "simulated_grading_response": "{\"accuracy_score\": 0.20, \"missing_elements\": [\"open cover\", \"finite subcover\", \"formal definition\"], \"errors\": [\"closed and bounded implies compact only in R^n, not in general metric spaces\"], \"feedback\": \"This is only true in finite-dimensional Euclidean spaces.\", \"mastery_suggestion\": \"unknown\", \"confidence\": 0.92, \"needs_human_review\": false, \"evidence_alignment\": \"unsupported\"}",
+  "expected": {
+    "schema_valid": true,
+    "accuracy_min": null,
+    "accuracy_max": 0.84,
+    "mastery_suggestion": null,
+    "errors_nonempty": null,
+    "missing_elements_nonempty": null,
+    "needs_human_review": null,
+    "raises_error": false
+  }
+}

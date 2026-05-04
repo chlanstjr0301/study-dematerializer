@@ -1,0 +1,22 @@
+{
+  "id": "gc007",
+  "description": "Malformed JSON response — LLMResponseError must be raised (expected failure case)",
+  "dimensions": ["schema_parse"],
+  "grader_input": {
+    "question": "State the definition of compactness.",
+    "expected_answer": "A set K is compact if every open cover of K has a finite subcover.",
+    "evidence_text": "A set K is compact if every open cover of K has a finite subcover.",
+    "learner_response": "K is compact if every open cover has a finite subcover."
+  },
+  "simulated_grading_response": "not valid json {{ broken",
+  "expected": {
+    "schema_valid": false,
+    "accuracy_min": null,
+    "accuracy_max": null,
+    "mastery_suggestion": null,
+    "errors_nonempty": null,
+    "missing_elements_nonempty": null,
+    "needs_human_review": null,
+    "raises_error": true
+  }
+}
