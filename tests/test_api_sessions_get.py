@@ -181,14 +181,3 @@ class TestGetVisualization:
         assert resp.status_code == 404
 
 
-class TestPostSessionsStub:
-    """POST /api/sessions returns 501 in MVP4-A (stub)."""
-
-    def test_post_sessions_returns_501(self):
-        payload = {
-            "concept_id": "compactness",
-            "questions_path": "compactness/questions.accepted.json",
-            "grader": "mock",
-        }
-        resp = client.post("/api/sessions", json=payload)
-        assert resp.status_code == 501

@@ -1,9 +1,9 @@
 """
-Service: recall sessions — list, get, run (MVP4-B adds run_session).
+Service: recall sessions — list, get, run.
 
-GET operations are implemented here for MVP4-A.
-POST (run_session) is a stub that raises NotImplementedError in MVP4-A
-and will be filled in during MVP4-B.
+GET operations (list_sessions, get_session, get_viz, get_summary) serve existing artifacts.
+POST (run_session) runs a new recall session via the MVP3 engine (grader=mock supported;
+grader=llm deferred to MVP4-E).
 """
 from __future__ import annotations
 
@@ -128,8 +128,121 @@ def get_summary(session_id: str, runs_dir: Path | None = None) -> str:
 
 def run_session(req: Any, runs_dir: Path | None = None, study_md_path: Path | None = None) -> dict:
     """
-    Run a recall session (MVP4-B implementation).
+    Run a recall session and write all artifacts.
 
-    This stub is replaced in MVP4-B when POST /api/sessions is fully implemented.
+    Parameters
+    ----------
+    req            : RunSessionRequest (concept_id, questions_path, grader, model,
+                     limit, answers, default_answer)
+    runs_dir       : override for config.RUNS_DIR (used in tests)
+    study_md_path  : override for config.STUDY_MD (used in tests)
+
+    Returns
+    -------
+    dict with keys: session_id, summary_md, attempt_count
+
+    Raises
+    ------
+    NotImplementedError : grader='llm' or grader='self' (MVP4-E/later)
+    ValueError          : validation failures (path traversal, missing self_score, etc.)
     """
-    raise NotImplementedError("POST /api/sessions is implemented in MVP4-B.")
+    import uuid
+    from datetime import datetime, timezone
+
+    from gonghaebun.grading.factory import make_grader
+    from gonghaebun.grading.schemas import GradingResult
+    from gonghaebun.study_loop.question_loader import load_recall_questions
+    from gonghaebun.study_loop.session_writer import build_study_session, write_session_artifacts
+    from gonghaebun.study_loop.white_recall import run_white_recall_batch, run_white_recall_session
+    from apps.api.services.bank_service import safe_resolve_under
+
+    # Grader gating
+    if req.grader == "llm":
+        raise NotImplementedError(
+            "grader='llm' is not supported in MVP4-B. Use grader='mock'."
+        )
+    if req.grader == "self":
+        if req.answers:
+            for a in req.answers:
+                if a.self_score is None:
+                    raise ValueError(
+                        f"self_score is required for question {a.question_id!r} "
+                        "when grader='self'."
+                    )
+        else:
+            raise ValueError(
+                "grader='self' requires explicit answers with self_score for each question."
+            )
+        raise NotImplementedError("grader='self' is not fully supported in MVP4-B.")
+
+    # Path safety: resolve questions_path relative to BANK_ROOT
+    questions_path = safe_resolve_under(config.BANK_ROOT, req.questions_path)
+
+    # Load questions
+    questions = load_recall_questions(questions_path, limit=req.limit)
+    if not questions:
+        raise ValueError(f"No accepted questions found at {req.questions_path!r}.")
+
+    # Build grader
+    grader = make_grader(req.grader, req.model)
+
+    started_at = datetime.now(timezone.utc).isoformat()
+    session_id = str(uuid.uuid4())
+
+    # Answer resolution
+    if req.answers is not None:
+        # Mode A: explicit per-question answers
+        answer_map = {a.question_id: a.learner_response for a in req.answers}
+        responses: list[tuple[str, GradingResult]] = []
+        for q in questions:
+            response = answer_map.get(q.question_id, "")
+            grading = grader.grade(
+                question=q.question,
+                expected_answer=q.expected_answer,
+                evidence_text=q.evidence.source_text,
+                learner_response=response,
+            )
+            responses.append((response, grading))
+        attempt_results = run_white_recall_batch(questions, responses)
+    else:
+        # Mode B: single default_answer (non-interactive / smoke mode)
+        attempt_results = run_white_recall_session(
+            questions,
+            grader,
+            no_interactive=True,
+            default_answer=req.default_answer or "",
+        )
+
+    ended_at = datetime.now(timezone.utc).isoformat()
+
+    session = build_study_session(
+        session_id=session_id,
+        concept_id=req.concept_id,
+        source_path=str(questions_path),
+        attempt_results=attempt_results,
+        started_at=started_at,
+        ended_at=ended_at,
+        grader_type=req.grader,
+    )
+
+    runs = runs_dir or config.RUNS_DIR
+    study_md = study_md_path or config.STUDY_MD
+
+    output_dir = write_session_artifacts(
+        session=session,
+        attempt_results=attempt_results,
+        runs_dir=runs,
+        study_md_path=study_md,
+        grader_type=req.grader,
+    )
+
+    summary_md = ""
+    summary_path = output_dir / "session_summary.md"
+    if summary_path.exists():
+        summary_md = summary_path.read_text(encoding="utf-8")
+
+    return {
+        "session_id": session_id,
+        "summary_md": summary_md,
+        "attempt_count": len(attempt_results),
+    }
