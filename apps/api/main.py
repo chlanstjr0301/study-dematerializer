@@ -9,7 +9,7 @@ from __future__ import annotations
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from apps.api.routers import bank, health, sessions, study_md, visualization
+from apps.api.routers import bank, banks, health, project, sessions, sources, study_md, visualization
 
 
 def create_app() -> FastAPI:
@@ -28,6 +28,9 @@ def create_app() -> FastAPI:
         allow_headers=["Content-Type"],
     )
 
+    app.include_router(project.router, prefix="/api")
+    app.include_router(sources.router, prefix="/api")
+    app.include_router(banks.router, prefix="/api")
     app.include_router(health.router, prefix="/api")
     app.include_router(study_md.router, prefix="/api")
     app.include_router(bank.router, prefix="/api")

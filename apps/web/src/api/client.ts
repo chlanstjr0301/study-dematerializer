@@ -9,6 +9,16 @@ import type {
   SummaryResponse,
   RunSessionRequest,
   RunSessionResponse,
+  ProjectStatus,
+  BootstrapResponse,
+  SourceItem,
+  UploadSourceResponse,
+  BuildBankRequest,
+  BuildBankResponse,
+  GeneratedQuestionItem,
+  ReviewBankRequest,
+  ReviewBankResponse,
+  ExportAcceptedResponse,
 } from './types';
 
 const BASE = '/api';
@@ -55,3 +65,55 @@ async function post<T>(path: string, body: unknown): Promise<T> {
 
 export const runSession = (payload: RunSessionRequest): Promise<RunSessionResponse> =>
   post('/sessions', payload);
+
+// ---------------------------------------------------------------------------
+// MVP4-E: Project
+// ---------------------------------------------------------------------------
+
+export const getProjectStatus = (): Promise<ProjectStatus> =>
+  get('/project/status');
+
+export const bootstrapProject = (overwrite = false): Promise<BootstrapResponse> =>
+  post(`/project/bootstrap${overwrite ? '?overwrite=true' : ''}`, {});
+
+// ---------------------------------------------------------------------------
+// MVP4-E: Sources
+// ---------------------------------------------------------------------------
+
+export const getSources = (): Promise<SourceItem[]> => get('/sources');
+
+export const uploadSource = async (
+  file: File,
+  conceptId: string,
+  documentId?: string,
+): Promise<UploadSourceResponse> => {
+  const form = new FormData();
+  form.append('file', file);
+  form.append('concept_id', conceptId);
+  if (documentId) form.append('document_id', documentId);
+  // Do NOT set Content-Type manually — browser sets multipart boundary automatically
+  const res = await fetch(`${BASE}/sources/upload`, { method: 'POST', body: form });
+  if (!res.ok) {
+    const d = await res.text();
+    throw new Error(`${res.status}: ${d}`);
+  }
+  return res.json() as Promise<UploadSourceResponse>;
+};
+
+// ---------------------------------------------------------------------------
+// MVP4-E: Build bank / review / export
+// ---------------------------------------------------------------------------
+
+export const buildBank = (p: BuildBankRequest): Promise<BuildBankResponse> =>
+  post('/banks/build', p);
+
+export const getGeneratedBank = (id: string): Promise<GeneratedQuestionItem[]> =>
+  get(`/banks/${id}/generated`);
+
+export const reviewBank = (
+  id: string,
+  p: ReviewBankRequest,
+): Promise<ReviewBankResponse> => post(`/banks/${id}/review`, p);
+
+export const exportAccepted = (id: string): Promise<ExportAcceptedResponse> =>
+  post(`/banks/${id}/export-accepted`, {});

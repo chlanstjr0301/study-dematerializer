@@ -79,3 +79,94 @@ export interface RunSessionResponse {
   summary_md: string;
   attempt_count: number;
 }
+
+// ---------------------------------------------------------------------------
+// MVP4-E: Project
+// ---------------------------------------------------------------------------
+
+export interface ProjectStatus {
+  project_root: string;
+  study_md_exists: boolean;
+  banks_dir_exists: boolean;
+  runs_dir_exists: boolean;
+  sources_dir_exists: boolean;
+}
+
+export interface BootstrapResponse {
+  created: string[];
+  skipped: string[];
+}
+
+// ---------------------------------------------------------------------------
+// MVP4-E: Sources
+// ---------------------------------------------------------------------------
+
+export interface SourceItem {
+  source_id: string;
+  filename: string;
+  relative_path: string;
+  size_bytes: number;
+  created_at: string;
+}
+
+export interface UploadSourceResponse {
+  source_path: string;
+  filename: string;
+  size_bytes: number;
+  document_id: string;
+}
+
+// ---------------------------------------------------------------------------
+// MVP4-E: Build bank
+// ---------------------------------------------------------------------------
+
+export interface BuildBankRequest {
+  concept_id: string;
+  source_relative_path: string;
+  document_id: string;
+}
+
+export interface BuildBankResponse {
+  concept_id: string;
+  document_id: string;
+  block_count: number;
+  question_count: number;
+  bank_dir: string;
+}
+
+// ---------------------------------------------------------------------------
+// MVP4-E: Review / export
+// ---------------------------------------------------------------------------
+
+export interface GeneratedQuestionItem {
+  question_id: string;
+  question: string;
+  question_type: string;
+  difficulty: string;
+  expected_answer: string;
+  status: string;
+  evidence: Record<string, unknown>;
+}
+
+export interface ReviewAction {
+  question_id: string;
+  action: 'accept' | 'reject' | 'edit' | 'skip';
+  updated_question?: string;
+  updated_expected_answer?: string;
+}
+
+export interface ReviewBankRequest {
+  actions: ReviewAction[];
+}
+
+export interface ReviewBankResponse {
+  total: number;
+  accepted: number;
+  rejected: number;
+  edited: number;
+  skipped: number;
+}
+
+export interface ExportAcceptedResponse {
+  accepted_count: number;
+}
