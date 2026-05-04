@@ -89,6 +89,172 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Directory for question-bank output artifacts (required).",
     )
 
+    # ------------------------------------------------------------------
+    # review-bank subcommand
+    # ------------------------------------------------------------------
+    review_bank = subparsers.add_parser(
+        "review-bank",
+        help="Interactively review generated questions (accept / reject).",
+    )
+    review_bank.add_argument(
+        "--questions",
+        required=True,
+        metavar="PATH",
+        help="Path to questions.generated.json (required).",
+    )
+    review_bank.add_argument(
+        "--output-dir",
+        required=True,
+        metavar="DIR",
+        help="Directory to write review artifacts (required).",
+    )
+
+    # ------------------------------------------------------------------
+    # recall-session subcommand
+    # ------------------------------------------------------------------
+    recall_session = subparsers.add_parser(
+        "recall-session",
+        help="Run a white-recall study session.",
+    )
+    recall_session.add_argument(
+        "--questions",
+        required=True,
+        metavar="PATH",
+        help="Path to questions.accepted.json (required).",
+    )
+    recall_session.add_argument(
+        "--concept",
+        required=True,
+        metavar="ID",
+        help="Concept ID to record in STUDY.md (required).",
+    )
+    recall_session.add_argument(
+        "--study-md",
+        default="data/gonghaebun/default/STUDY.md",
+        metavar="PATH",
+        help="Path to STUDY.md. (default: data/gonghaebun/default/STUDY.md)",
+    )
+    recall_session.add_argument(
+        "--runs-dir",
+        default="data/gonghaebun/default/runs",
+        metavar="DIR",
+        help="Directory for session run artifacts. (default: data/gonghaebun/default/runs)",
+    )
+    recall_session.add_argument(
+        "--limit",
+        type=int,
+        default=None,
+        metavar="N",
+        help="Maximum number of questions to ask (default: all).",
+    )
+    recall_session.add_argument(
+        "--grader",
+        choices=["self", "llm", "mock"],
+        default="self",
+        help="Grading mode: self (default), llm, or mock.",
+    )
+    recall_session.add_argument(
+        "--provider",
+        default="openai",
+        metavar="PROVIDER",
+        help="LLM provider (only used with --grader llm). (default: openai)",
+    )
+    recall_session.add_argument(
+        "--model",
+        default="gpt-4o-mini",
+        metavar="MODEL",
+        help="LLM model ID (only used with --grader llm). (default: gpt-4o-mini)",
+    )
+    recall_session.add_argument(
+        "--no-interactive",
+        action="store_true",
+        default=False,
+        help="Batch mode: skip input prompts (uses empty learner responses).",
+    )
+    recall_session.add_argument(
+        "--default-score",
+        type=int,
+        default=2,
+        metavar="0-3",
+        help="Self-grader score when --no-interactive is set. (default: 2)",
+    )
+    recall_session.add_argument(
+        "--default-answer",
+        default=None,
+        metavar="TEXT",
+        help="Learner answer text for --no-interactive + --grader llm.",
+    )
+
+    # ------------------------------------------------------------------
+    # review-due subcommand
+    # ------------------------------------------------------------------
+    review_due = subparsers.add_parser(
+        "review-due",
+        help="Review all concepts whose next_review date is today or past.",
+    )
+    review_due.add_argument(
+        "--bank-root",
+        default=None,
+        metavar="DIR",
+        help="Root directory; looks for {bank-root}/{concept}/questions.accepted.json.",
+    )
+    review_due.add_argument(
+        "--questions",
+        default=None,
+        metavar="PATH",
+        help="Explicit path to questions.accepted.json (overrides --bank-root lookup).",
+    )
+    review_due.add_argument(
+        "--study-md",
+        default="data/gonghaebun/default/STUDY.md",
+        metavar="PATH",
+        help="Path to STUDY.md. (default: data/gonghaebun/default/STUDY.md)",
+    )
+    review_due.add_argument(
+        "--runs-dir",
+        default="data/gonghaebun/default/runs",
+        metavar="DIR",
+        help="Directory for session run artifacts. (default: data/gonghaebun/default/runs)",
+    )
+    review_due.add_argument(
+        "--limit",
+        type=int,
+        default=None,
+        metavar="N",
+        help="Maximum questions per concept (default: all).",
+    )
+    review_due.add_argument(
+        "--grader",
+        choices=["self", "llm", "mock"],
+        default="self",
+        help="Grading mode: self (default), llm, or mock.",
+    )
+    review_due.add_argument(
+        "--provider",
+        default="openai",
+        metavar="PROVIDER",
+        help="LLM provider (only used with --grader llm). (default: openai)",
+    )
+    review_due.add_argument(
+        "--model",
+        default="gpt-4o-mini",
+        metavar="MODEL",
+        help="LLM model ID (only used with --grader llm). (default: gpt-4o-mini)",
+    )
+    review_due.add_argument(
+        "--no-interactive",
+        action="store_true",
+        default=False,
+        help="Batch mode: skip input prompts.",
+    )
+    review_due.add_argument(
+        "--default-score",
+        type=int,
+        default=2,
+        metavar="0-3",
+        help="Self-grader score when --no-interactive is set. (default: 2)",
+    )
+
     return parser
 
 
@@ -101,6 +267,15 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "build-bank":
         return _cmd_build_bank(args)
+
+    if args.command == "review-bank":
+        return _cmd_review_bank(args)
+
+    if args.command == "recall-session":
+        return _cmd_recall_session(args)
+
+    if args.command == "review-due":
+        return _cmd_review_due(args)
 
     parser.print_help()
     return 1
@@ -241,6 +416,213 @@ def _cmd_build_bank(args: argparse.Namespace) -> int:
         status = "OK" if path.exists() else "MISSING"
         print(f"  [{status}] {path}")
 
+    return 0
+
+
+def _cmd_review_bank(args: argparse.Namespace) -> int:
+    from gonghaebun.review.review_cli import run_review_cli
+
+    questions_path = Path(args.questions)
+    output_dir = Path(args.output_dir)
+
+    if not questions_path.exists():
+        print(f"Error: questions file not found: {questions_path}", file=sys.stderr)
+        return 2
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    print(f"Reviewing questions from: {questions_path}")
+    print(f"Output dir              : {output_dir}")
+    print()
+
+    records = run_review_cli(questions_path, output_dir)
+    print(f"Review complete. {len(records)} question(s) reviewed.")
+    return 0
+
+
+def _make_grader(grader_type: str, model: str = "gpt-4o-mini"):
+    """Instantiate the requested grader. Returns an AnswerGrader."""
+    if grader_type == "self":
+        from gonghaebun.grading.self_grader import SelfGrader
+        return SelfGrader()
+
+    if grader_type == "mock":
+        from gonghaebun.grading.llm_grader import LLMGrader
+        from gonghaebun.llm.mock import MockLLMClient
+        return LLMGrader(MockLLMClient())
+
+    if grader_type == "llm":
+        from gonghaebun.grading.llm_grader import LLMGrader
+        from gonghaebun.llm.errors import LLMAPIKeyError
+        from gonghaebun.llm.openai_client import OpenAIClient
+        try:
+            client = OpenAIClient(model=model)
+        except LLMAPIKeyError as exc:
+            print(f"Error: {exc}", file=sys.stderr)
+            sys.exit(2)
+        return LLMGrader(client)
+
+    raise ValueError(f"Unknown grader type: {grader_type!r}")
+
+
+def _cmd_recall_session(args: argparse.Namespace) -> int:
+    import uuid
+    from datetime import datetime, timezone
+
+    from gonghaebun.study_loop.question_loader import load_recall_questions
+    from gonghaebun.study_loop.session_writer import build_study_session, write_session_artifacts
+    from gonghaebun.study_loop.white_recall import run_white_recall_session
+
+    questions_path = Path(args.questions)
+    if not questions_path.exists():
+        print(f"Error: questions file not found: {questions_path}", file=sys.stderr)
+        return 2
+
+    # --no-interactive + --grader llm guard
+    if args.no_interactive and args.grader == "llm" and not args.default_answer:
+        print(
+            "Warning: --no-interactive with --grader llm will grade empty answers. "
+            "Proceed with caution.",
+            file=sys.stderr,
+        )
+
+    grader = _make_grader(args.grader, getattr(args, "model", "gpt-4o-mini"))
+
+    questions = load_recall_questions(questions_path, limit=args.limit)
+    if not questions:
+        print("No questions found in the question bank.")
+        return 0
+
+    started_at = datetime.now(timezone.utc).isoformat()
+    session_id = str(uuid.uuid4())
+
+    print(f"Recall session: {session_id}")
+    print(f"Concept       : {args.concept}")
+    print(f"Questions     : {len(questions)}")
+    print(f"Grader        : {args.grader}")
+    print()
+
+    default_answer: str = args.default_answer or ""
+
+    attempt_results = run_white_recall_session(
+        questions,
+        grader,
+        no_interactive=args.no_interactive,
+        default_answer=default_answer,
+    )
+
+    ended_at = datetime.now(timezone.utc).isoformat()
+
+    session = build_study_session(
+        session_id=session_id,
+        concept_id=args.concept,
+        source_path=str(questions_path),
+        attempt_results=attempt_results,
+        started_at=started_at,
+        ended_at=ended_at,
+        grader_type=args.grader,
+    )
+
+    output_dir = write_session_artifacts(
+        session=session,
+        attempt_results=attempt_results,
+        runs_dir=Path(args.runs_dir),
+        study_md_path=Path(args.study_md),
+        grader_type=args.grader,
+    )
+
+    print(f"Session complete.")
+    print(f"Artifacts : {output_dir}")
+    print(f"STUDY.md  : {args.study_md}")
+    return 0
+
+
+def _cmd_review_due(args: argparse.Namespace) -> int:
+    import uuid
+    from datetime import datetime, timezone
+
+    from gonghaebun.study_loop.question_loader import load_recall_questions
+    from gonghaebun.study_loop.review_due import find_question_bank, get_due_concepts
+    from gonghaebun.study_loop.session_writer import build_study_session, write_session_artifacts
+    from gonghaebun.study_loop.white_recall import run_white_recall_session
+
+    study_md_path = Path(args.study_md)
+    runs_dir = Path(args.runs_dir)
+
+    due_concepts = get_due_concepts(study_md_path)
+
+    if not due_concepts:
+        print("No concepts are due for review.")
+        return 0
+
+    print(f"Due concepts: {', '.join(due_concepts)}")
+    print()
+
+    grader = _make_grader(args.grader, getattr(args, "model", "gpt-4o-mini"))
+
+    for concept_id in due_concepts:
+        # Resolve question bank path
+        if args.questions:
+            questions_path = Path(args.questions)
+            if not questions_path.exists():
+                print(
+                    f"Error: questions file not found: {questions_path}",
+                    file=sys.stderr,
+                )
+                return 2
+        else:
+            if not args.bank_root:
+                print(
+                    "Error: --bank-root or --questions is required.",
+                    file=sys.stderr,
+                )
+                return 2
+            try:
+                questions_path = find_question_bank(Path(args.bank_root), concept_id)
+            except FileNotFoundError as exc:
+                print(f"Error: {exc}", file=sys.stderr)
+                return 2
+
+        questions = load_recall_questions(questions_path, limit=args.limit)
+        if not questions:
+            print(f"  [{concept_id}] No questions found — skipping.")
+            continue
+
+        started_at = datetime.now(timezone.utc).isoformat()
+        session_id = str(uuid.uuid4())
+
+        print(f"  [{concept_id}] {len(questions)} question(s), grader={args.grader}")
+
+        attempt_results = run_white_recall_session(
+            questions,
+            grader,
+            no_interactive=args.no_interactive,
+            default_answer="",
+        )
+
+        ended_at = datetime.now(timezone.utc).isoformat()
+
+        session = build_study_session(
+            session_id=session_id,
+            concept_id=concept_id,
+            source_path=str(questions_path),
+            attempt_results=attempt_results,
+            started_at=started_at,
+            ended_at=ended_at,
+            grader_type=args.grader,
+        )
+
+        output_dir = write_session_artifacts(
+            session=session,
+            attempt_results=attempt_results,
+            runs_dir=runs_dir,
+            study_md_path=study_md_path,
+            grader_type=args.grader,
+        )
+
+        print(f"  [{concept_id}] artifacts → {output_dir}")
+
+    print()
+    print(f"STUDY.md: {study_md_path}")
     return 0
 
 

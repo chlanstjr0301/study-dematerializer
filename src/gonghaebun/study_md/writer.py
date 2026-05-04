@@ -96,6 +96,21 @@ def apply_patch(study_md_path: Path, session: StudySession) -> None:
         _update_record(existing[concept_id], session)
 
     _write_study_md(study_md_path, existing)
+    validate_study_md(study_md_path)
+
+
+def validate_study_md(path: Path) -> None:
+    """
+    Parse the written STUDY.md and raise ValueError if it contains no concept records.
+
+    Called automatically by apply_patch() after every write to catch corruption.
+    """
+    records = parse_study_md(path)
+    if not records:
+        raise ValueError(
+            f"STUDY.md validation failed: no concept records were parsed from {path}. "
+            "The file may be corrupt or empty."
+        )
 
 
 def _update_record(record: ConceptRecord, session: StudySession) -> None:

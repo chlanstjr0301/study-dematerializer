@@ -1,0 +1,11 @@
+{
+  "accuracy_score": 0.75,
+  "missing_elements": ["formal epsilon-delta definition"],
+  "errors": [],
+  "feedback": "Good intuitive understanding. Missing formal precision.",
+  "mastery_suggestion": "partial",
+  "confidence": 0.9,
+  "needs_human_review": false,
+  "evidence_alignment": "supported",
+  "raw_response": ""
+}
