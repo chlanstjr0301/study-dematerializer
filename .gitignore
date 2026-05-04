@@ -34,3 +34,7 @@ tmp_runs
 # Eval framework runtime outputs (do not commit)
 evals/runs/
 tmp_mvp3*/
+
+# Frontend build artifacts (do not commit)
+node_modules/
+apps/web/dist/
