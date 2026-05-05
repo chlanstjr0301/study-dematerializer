@@ -223,7 +223,10 @@ class TestValidationErrors:
         resp = client.post("/api/sessions", json=payload)
         assert resp.status_code == 400
 
-    def test_grader_llm_returns_501(self, session_env):
+    def test_grader_llm_no_api_key_returns_400(self, session_env, monkeypatch):
+        """grader=llm with no OPENAI_API_KEY → 400 (LLMAPIKeyError caught as ValueError)."""
+        import os
+        monkeypatch.delenv("OPENAI_API_KEY", raising=False)
         payload = {
             "concept_id": "compactness",
             "questions_path": session_env["questions_path"],
@@ -231,7 +234,19 @@ class TestValidationErrors:
             "default_answer": "Some answer",
         }
         resp = client.post("/api/sessions", json=payload)
-        assert resp.status_code == 501
+        assert resp.status_code == 400
+
+    def test_grader_llm_disabled_returns_400(self, session_env, monkeypatch):
+        """GONGHAEBUN_LLM_DISABLED=1 → 400 regardless of API key."""
+        monkeypatch.setattr(session_svc.config, "LLM_DISABLED", True)
+        payload = {
+            "concept_id": "compactness",
+            "questions_path": session_env["questions_path"],
+            "grader": "llm",
+            "default_answer": "Some answer",
+        }
+        resp = client.post("/api/sessions", json=payload)
+        assert resp.status_code == 400
 
     def test_grader_self_missing_self_score_returns_400(self, session_env):
         payload = {

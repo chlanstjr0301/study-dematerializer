@@ -55,6 +55,10 @@ class MockLLMClient(LLMClient):
             raise ValueError(f"Fixture is not a JSON object: {data!r}")
         return data
 
+    def complete_structured(self, system: str, user: str, json_schema: dict) -> dict:
+        """Delegates to complete_json(); json_schema is ignored in mock mode."""
+        return self.complete_json(system, user)
+
     def _load(self, user: str) -> dict | str:
         key = self._extract_key(user)
         if key is None:

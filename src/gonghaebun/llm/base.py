@@ -20,3 +20,13 @@ class LLMClient(ABC):
     @abstractmethod
     def complete_json(self, system: str, user: str) -> dict:
         """Return a parsed JSON dict. Raises ValueError on parse failure."""
+
+    @abstractmethod
+    def complete_structured(self, system: str, user: str, json_schema: dict) -> dict:
+        """
+        Call the LLM with provider-level JSON schema enforcement.
+
+        Returns the parsed dict guaranteed to match json_schema.
+        Raises LLMResponseError if the response cannot be parsed as JSON.
+        Raises LLMError on provider-level failures.
+        """

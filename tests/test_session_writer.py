@@ -143,7 +143,7 @@ class TestBuildStudySession:
 
 
 class TestWriteSessionArtifacts:
-    def _run(self, tmp_path, attempts=None, grader_type="self"):
+    def _run(self, tmp_path, attempts=None, grader_type="self", grader=None):
         if attempts is None:
             attempts = [make_attempt()]
         session = build_study_session(
@@ -156,8 +156,40 @@ class TestWriteSessionArtifacts:
             runs_dir=tmp_path / "runs",
             study_md_path=tmp_path / "STUDY.md",
             grader_type=grader_type,
+            grader=grader,
         )
         return output_dir, session
+
+    def _make_llm_grader_with_traces(self, num_traces: int = 1):
+        """Create an LLMGrader pre-populated with fake traces for testing."""
+        from gonghaebun.grading.llm_grader import LLMGrader
+        from gonghaebun.grading.trace_models import LLMAttemptRecord, LLMTraceRecord
+        from gonghaebun.llm.mock import MockLLMClient
+
+        grader = LLMGrader(MockLLMClient())
+        grader.traces = [
+            LLMTraceRecord(
+                question_id=f"q{i}",
+                concept_id=CONCEPT_ID,
+                representation_type="formal",
+                model="mock",
+                attempts=[
+                    LLMAttemptRecord(
+                        call_index=0,
+                        prompt_hash="sha256:abc",
+                        parsed_ok=True,
+                        fallback=False,
+                        duration_ms=100.0,
+                        structured_output_used=True,
+                        llm_output={"accuracy_score": 0.75},
+                        error_message=None,
+                        created_at="2026-05-05T12:00:00+00:00",
+                    )
+                ],
+            )
+            for i in range(num_traces)
+        ]
+        return grader
 
     def test_returns_output_dir_path(self, tmp_path):
         output_dir, _ = self._run(tmp_path)
@@ -188,12 +220,13 @@ class TestWriteSessionArtifacts:
         assert (output_dir / "session_summary.md").exists()
 
     def test_llm_traces_created_only_for_llm_grader(self, tmp_path):
-        output_dir, _ = self._run(tmp_path, grader_type="llm")
-        assert (output_dir / "llm_traces.jsonl").exists()
+        grader = self._make_llm_grader_with_traces(1)
+        output_dir, _ = self._run(tmp_path, grader_type="llm", grader=grader)
+        assert (output_dir / "llm_traces").is_dir()
 
     def test_llm_traces_not_created_for_self_grader(self, tmp_path):
         output_dir, _ = self._run(tmp_path, grader_type="self")
-        assert not (output_dir / "llm_traces.jsonl").exists()
+        assert not (output_dir / "llm_traces").exists()
 
     def test_study_md_created(self, tmp_path):
         self._run(tmp_path)
@@ -216,15 +249,17 @@ class TestWriteSessionArtifacts:
         data = json.loads((output_dir / "grading_results.json").read_text("utf-8"))
         assert all("raw_response" in item for item in data)
 
-    def test_llm_traces_jsonl_line_per_attempt(self, tmp_path):
+    def test_llm_traces_dir_contains_one_file_per_question(self, tmp_path):
+        grader = self._make_llm_grader_with_traces(2)
         attempts = [make_attempt(), make_attempt("intuition_recall")]
-        output_dir, _ = self._run(tmp_path, attempts=attempts, grader_type="llm")
-        lines = (output_dir / "llm_traces.jsonl").read_text("utf-8").strip().splitlines()
-        assert len(lines) == 2
-        for line in lines:
-            obj = json.loads(line)
-            assert "question_id" in obj
-            assert "raw_response" in obj
+        output_dir, _ = self._run(tmp_path, attempts=attempts, grader_type="llm", grader=grader)
+        traces_dir = output_dir / "llm_traces"
+        assert traces_dir.is_dir()
+        assert len(list(traces_dir.iterdir())) == 2
+
+    def test_llm_traces_not_written_for_mock_grader_type(self, tmp_path):
+        output_dir, _ = self._run(tmp_path, grader_type="mock")
+        assert not (output_dir / "llm_traces").exists()
 
 
 # ---------------------------------------------------------------------------

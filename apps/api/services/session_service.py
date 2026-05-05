@@ -158,9 +158,10 @@ def run_session(req: Any, runs_dir: Path | None = None, study_md_path: Path | No
 
     # Grader gating
     if req.grader == "llm":
-        raise NotImplementedError(
-            "grader='llm' is not supported in MVP4-B. Use grader='mock'."
-        )
+        if config.LLM_DISABLED:
+            raise ValueError(
+                "LLM grader is disabled (GONGHAEBUN_LLM_DISABLED=1). Use grader='mock'."
+            )
     if req.grader == "self":
         if req.answers:
             for a in req.answers:
@@ -184,7 +185,11 @@ def run_session(req: Any, runs_dir: Path | None = None, study_md_path: Path | No
         raise ValueError(f"No accepted questions found at {req.questions_path!r}.")
 
     # Build grader
-    grader = make_grader(req.grader, req.model)
+    from gonghaebun.llm.errors import LLMAPIKeyError
+    try:
+        grader = make_grader(req.grader, req.model)
+    except LLMAPIKeyError as e:
+        raise ValueError(f"LLM grader requires OPENAI_API_KEY: {e}") from e
 
     started_at = datetime.now(timezone.utc).isoformat()
     session_id = str(uuid.uuid4())
@@ -192,9 +197,17 @@ def run_session(req: Any, runs_dir: Path | None = None, study_md_path: Path | No
     # Answer resolution
     if req.answers is not None:
         # Mode A: explicit per-question answers
+        from gonghaebun.grading.llm_grader import LLMGrader
+        from gonghaebun.study_loop.mastery import QUESTION_TYPE_TO_REP
         answer_map = {a.question_id: a.learner_response for a in req.answers}
         responses: list[tuple[str, GradingResult]] = []
         for q in questions:
+            if isinstance(grader, LLMGrader):
+                grader._set_context(
+                    req.concept_id,
+                    QUESTION_TYPE_TO_REP.get(q.question_type, "formal"),
+                    q.question_id,
+                )
             response = answer_map.get(q.question_id, "")
             grading = grader.grade(
                 question=q.question,
@@ -234,6 +247,7 @@ def run_session(req: Any, runs_dir: Path | None = None, study_md_path: Path | No
         runs_dir=runs,
         study_md_path=study_md,
         grader_type=req.grader,
+        grader=grader,
     )
 
     summary_md = ""

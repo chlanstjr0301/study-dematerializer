@@ -8,7 +8,7 @@
     "evidence_text": "A set K is compact if every open cover of K has a finite subcover.",
     "learner_response": "K is compact if and only if every open cover of K has a finite subcover."
   },
-  "simulated_grading_response": "{\"accuracy_score\": 0.92, \"missing_elements\": [], \"errors\": [], \"feedback\": \"Excellent recall. Definition is complete and precise.\", \"mastery_suggestion\": \"solid\", \"confidence\": 0.95, \"needs_human_review\": false, \"evidence_alignment\": \"supported\"}",
+  "simulated_grading_response": "{\"accuracy_score\": 0.92, \"mastery_after\": \"solid\", \"missing_elements\": [], \"errors\": [], \"misconception_flags\": [], \"evidence_alignment_score\": 0.9, \"needs_human_review\": false, \"short_feedback\": \"Excellent recall. Definition is complete and precise.\"}",
   "expected": {
     "schema_valid": true,
     "accuracy_min": 0.85,

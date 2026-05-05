@@ -86,3 +86,42 @@ class OpenAIClient(LLMClient):
             raise LLMResponseError(
                 f"OpenAI response is not valid JSON: {raw!r}"
             ) from exc
+
+    def complete_structured(self, system: str, user: str, json_schema: dict) -> dict:
+        """
+        Call the OpenAI Responses API with provider-level JSON schema enforcement.
+
+        Uses the text.format json_schema option to guarantee the response
+        matches the provided schema. Returns the parsed dict.
+
+        Raises:
+            LLMResponseError: if the response cannot be parsed as JSON
+                              (should not occur with schema enforcement, but
+                              included as a safety net).
+            LLMError:         if the OpenAI API returns an error.
+        """
+        try:
+            import openai  # noqa: PLC0415
+            response = self._client.responses.create(
+                model=self._model,
+                instructions=system,
+                input=user,
+                text={
+                    "format": {
+                        "type": "json_schema",
+                        "name": "grading_output",
+                        "schema": json_schema,
+                        "strict": True,
+                    }
+                },
+            )
+            raw = response.output_text
+        except openai.APIError as exc:
+            raise LLMError(f"OpenAI API error: {exc}") from exc
+
+        try:
+            return json.loads(raw)
+        except json.JSONDecodeError as exc:
+            raise LLMResponseError(
+                f"OpenAI structured response is not valid JSON: {raw!r}"
+            ) from exc

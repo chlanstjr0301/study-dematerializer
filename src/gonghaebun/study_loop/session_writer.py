@@ -127,6 +127,7 @@ def write_session_artifacts(
     runs_dir: Path,
     study_md_path: Path,
     grader_type: str = "self",
+    grader: object = None,
 ) -> Path:
     """
     Write all session artifacts and update STUDY.md.
@@ -189,16 +190,12 @@ def write_session_artifacts(
     ]
     _write_json(output_dir / "grading_results.json", grading_data)
 
-    # llm_traces.jsonl — only when grader_type is "llm"
+    # llm_traces/ — per-question JSON files; only when grader_type is "llm"
     if grader_type == "llm":
-        traces_path = output_dir / "llm_traces.jsonl"
-        with traces_path.open("w", encoding="utf-8") as f:
-            for ar in attempt_results:
-                line = json.dumps({
-                    "question_id": ar.question.question_id,
-                    "raw_response": ar.grading.raw_response,
-                }, ensure_ascii=False)
-                f.write(line + "\n")
+        from gonghaebun.grading.trace_models import write_trace_artifacts
+        traces_dir = output_dir / "llm_traces"
+        traces = getattr(grader, "traces", [])
+        write_trace_artifacts(traces, traces_dir)
 
     # STUDY.patch.md
     patch_text = generate_patch(session)

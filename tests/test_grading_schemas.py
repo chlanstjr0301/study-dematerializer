@@ -150,6 +150,39 @@ class TestPromptBuilder:
         _, user = build_grading_prompt("q", "ea", "ev", "lr")
         assert "__fixture__:grading/answer_grader" in user
 
+    def test_concept_id_appears_in_user_prompt_when_provided(self):
+        _, user = build_grading_prompt("q", "ea", "ev", "lr", concept_id="compactness")
+        assert "compactness" in user
+
+    def test_representation_type_appears_in_user_prompt_when_provided(self):
+        _, user = build_grading_prompt("q", "ea", "ev", "lr", representation_type="formal")
+        assert "formal" in user
+
+    def test_strictness_note_present_for_formal(self):
+        _, user = build_grading_prompt("q", "ea", "ev", "lr", representation_type="formal")
+        assert "quantifier" in user.lower() or "formal" in user.lower()
+
+    def test_strictness_note_present_for_proof_schema(self):
+        _, user = build_grading_prompt(
+            "q", "ea", "ev", "lr", representation_type="proof_schema"
+        )
+        assert "proof" in user.lower() or "formal" in user.lower()
+
+    def test_strictness_note_absent_for_intuitive(self):
+        _, user = build_grading_prompt("q", "ea", "ev", "lr", representation_type="intuitive")
+        assert "quantifier" not in user.lower()
+
+    def test_fixture_key_still_present_with_context_kwargs(self):
+        _, user = build_grading_prompt(
+            "q", "ea", "ev", "lr",
+            concept_id="compactness", representation_type="formal",
+        )
+        assert "__fixture__:grading/answer_grader" in user
+
+    def test_no_context_block_when_no_kwargs(self):
+        _, user = build_grading_prompt("q", "ea", "ev", "lr")
+        assert "## Context" not in user
+
 
 # ---------------------------------------------------------------------------
 # TestSelfScoreToGradingResult

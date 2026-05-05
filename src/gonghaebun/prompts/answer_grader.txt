@@ -14,17 +14,18 @@ Rules:
 Output schema (all fields required):
 {
   "accuracy_score": <float 0.0-1.0>,
+  "mastery_after": "<unknown|partial|solid>",
   "missing_elements": [<string>, ...],
   "errors": [<string>, ...],
-  "feedback": "<one or two sentence summary for the learner>",
-  "mastery_suggestion": "<unknown|partial|solid>",
-  "confidence": <float 0.0-1.0>,
+  "misconception_flags": [<string>, ...],
+  "evidence_alignment_score": <float 0.0-1.0>,
   "needs_human_review": <true|false>,
-  "evidence_alignment": "<supported|partially_supported|unsupported>"
+  "short_feedback": "<one or two sentence summary for the learner>"
 }
 
 Scoring guide:
-- accuracy_score >= 0.85 → mastery_suggestion = "solid"
-- accuracy_score >= 0.50 → mastery_suggestion = "partial"
-- accuracy_score < 0.50  → mastery_suggestion = "unknown"
-- confidence < 0.6 or evidence_alignment = "unsupported" → needs_human_review = true
+- accuracy_score >= 0.85 → mastery_after = "solid"
+- accuracy_score >= 0.50 → mastery_after = "partial"
+- accuracy_score < 0.50  → mastery_after = "unknown"
+- evidence_alignment_score < 0.4 → needs_human_review = true
+- misconception_flags: list any conceptual misconceptions detected (may be empty)

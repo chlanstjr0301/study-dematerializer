@@ -8,7 +8,7 @@
     "evidence_text": "A set K is compact if every open cover of K has a finite subcover.",
     "learner_response": "Yes, a compact set is closed and bounded, just like in R^n. This always works."
   },
-  "simulated_grading_response": "{\"accuracy_score\": 0.28, \"missing_elements\": [\"general metric space caveat\", \"open cover definition\"], \"errors\": [\"compact is NOT equivalent to closed and bounded outside R^n\"], \"feedback\": \"The Heine-Borel theorem applies only in R^n. In general metric spaces, closed and bounded does not imply compact.\", \"mastery_suggestion\": \"unknown\", \"confidence\": 0.90, \"needs_human_review\": false, \"evidence_alignment\": \"partially_supported\"}",
+  "simulated_grading_response": "{\"accuracy_score\": 0.28, \"mastery_after\": \"unknown\", \"missing_elements\": [\"general metric space caveat\", \"open cover definition\"], \"errors\": [\"compact is NOT equivalent to closed and bounded outside R^n\"], \"misconception_flags\": [], \"evidence_alignment_score\": 0.55, \"needs_human_review\": false, \"short_feedback\": \"The Heine-Borel theorem applies only in R^n. In general metric spaces, closed and bounded does not imply compact.\"}",
   "expected": {
     "schema_valid": true,
     "accuracy_min": null,

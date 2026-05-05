@@ -8,7 +8,7 @@
     "evidence_text": "A set K is compact if every open cover of K has a finite subcover.",
     "learner_response": "A compact set is a set that is closed and bounded."
   },
-  "simulated_grading_response": "{\"accuracy_score\": 0.20, \"missing_elements\": [\"open cover\", \"finite subcover\", \"formal definition\"], \"errors\": [\"closed and bounded implies compact only in R^n, not in general metric spaces\"], \"feedback\": \"This is only true in finite-dimensional Euclidean spaces.\", \"mastery_suggestion\": \"unknown\", \"confidence\": 0.92, \"needs_human_review\": false, \"evidence_alignment\": \"unsupported\"}",
+  "simulated_grading_response": "{\"accuracy_score\": 0.20, \"mastery_after\": \"unknown\", \"missing_elements\": [\"open cover\", \"finite subcover\", \"formal definition\"], \"errors\": [\"closed and bounded implies compact only in R^n, not in general metric spaces\"], \"misconception_flags\": [], \"evidence_alignment_score\": 0.2, \"needs_human_review\": false, \"short_feedback\": \"This is only true in finite-dimensional Euclidean spaces.\"}",
   "expected": {
     "schema_valid": true,
     "accuracy_min": null,

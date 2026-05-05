@@ -47,35 +47,35 @@ from eval_utils import (  # noqa: E402
 
 _SOLID_RESPONSE = json.dumps({
     "accuracy_score": 0.92,
+    "mastery_after": "solid",
     "missing_elements": [],
     "errors": [],
-    "feedback": "Excellent.",
-    "mastery_suggestion": "solid",
-    "confidence": 0.95,
+    "misconception_flags": [],
+    "evidence_alignment_score": 0.9,
     "needs_human_review": False,
-    "evidence_alignment": "supported",
+    "short_feedback": "Excellent.",
 })
 
 _PARTIAL_RESPONSE = json.dumps({
     "accuracy_score": 0.62,
+    "mastery_after": "partial",
     "missing_elements": ["open cover requirement"],
     "errors": [],
-    "feedback": "Partial.",
-    "mastery_suggestion": "partial",
-    "confidence": 0.9,
+    "misconception_flags": [],
+    "evidence_alignment_score": 0.55,
     "needs_human_review": False,
-    "evidence_alignment": "partially_supported",
+    "short_feedback": "Partial.",
 })
 
 _WRONG_RESPONSE = json.dumps({
     "accuracy_score": 0.20,
+    "mastery_after": "unknown",
     "missing_elements": ["open cover", "finite subcover"],
     "errors": ["closed and bounded != compact outside R^n"],
-    "feedback": "Wrong.",
-    "mastery_suggestion": "unknown",
-    "confidence": 0.92,
+    "misconception_flags": [],
+    "evidence_alignment_score": 0.2,
     "needs_human_review": False,
-    "evidence_alignment": "unsupported",
+    "short_feedback": "Wrong.",
 })
 
 _GRADER_INPUT = {
@@ -94,24 +94,24 @@ _WRONG_INPUT = {
 
 _MISCONCEPTION_RESPONSE = json.dumps({
     "accuracy_score": 0.28,
+    "mastery_after": "unknown",
     "missing_elements": ["open cover", "finite subcover"],
     "errors": ["compact is NOT equivalent to closed and bounded outside R^n"],
-    "feedback": "Misconception detected.",
-    "mastery_suggestion": "unknown",
-    "confidence": 0.90,
+    "misconception_flags": [],
+    "evidence_alignment_score": 0.55,
     "needs_human_review": False,
-    "evidence_alignment": "partially_supported",
+    "short_feedback": "Misconception detected.",
 })
 
 _MISSING_ELEMENTS_RESPONSE = json.dumps({
     "accuracy_score": 0.15,
+    "mastery_after": "unknown",
     "missing_elements": ["open cover", "finite subcover", "formal definition"],
     "errors": [],
-    "feedback": "Too vague.",
-    "mastery_suggestion": "unknown",
-    "confidence": 0.88,
+    "misconception_flags": [],
+    "evidence_alignment_score": 0.55,
     "needs_human_review": False,
-    "evidence_alignment": "partially_supported",
+    "short_feedback": "Too vague.",
 })
 
 

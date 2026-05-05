@@ -59,6 +59,10 @@ class _FixtureLLMClient(LLMClient):
     def complete_json(self, system: str, user: str) -> dict:
         return json.loads(self._response)
 
+    def complete_structured(self, system: str, user: str, json_schema: dict) -> dict:
+        """Delegates to complete_json(); json_schema is ignored in fixture mode."""
+        return self.complete_json(system, user)
+
 
 # ---------------------------------------------------------------------------
 # .env loader (no python-dotenv dependency)
@@ -328,35 +332,38 @@ def eval_missing_elements_overlap(entry: GoldenEntry, grader_client: LLMClient) 
 
 def eval_expected_schema_failure(entry: GoldenEntry, grader_client: LLMClient) -> EvalResult:
     """
-    Verify that a malformed response triggers LLMResponseError (gc007 expected failure).
+    Verify that a malformed response triggers graceful fallback (needs_human_review=True).
+
+    The LLM grader no longer raises LLMResponseError; instead it falls back to a
+    human-review result when the response cannot be parsed or validated.
     Not counted in schema_parse_success_rate.
     """
     try:
-        _grade(entry, grader_client)
-        # If we get here, no error was raised — that's a failure
-        return EvalResult(
-            case_id=entry.id,
-            dimension="expected_schema_failure",
-            passed=False,
-            score=None,
-            message="Expected LLMResponseError was NOT raised — malformed JSON was accepted",
-        )
-    except LLMResponseError:
-        return EvalResult(
-            case_id=entry.id,
-            dimension="expected_schema_failure",
-            passed=True,
-            score=None,
-            message="LLMResponseError raised as expected",
-        )
+        result = _grade(entry, grader_client)
     except Exception as exc:
         return EvalResult(
             case_id=entry.id,
             dimension="expected_schema_failure",
             passed=False,
             score=None,
-            message=f"Unexpected error type {type(exc).__name__}: {exc}",
+            message=f"Unexpected error {type(exc).__name__}: {exc}",
         )
+
+    if result.needs_human_review:
+        return EvalResult(
+            case_id=entry.id,
+            dimension="expected_schema_failure",
+            passed=True,
+            score=None,
+            message="Malformed response produced fallback with needs_human_review=True",
+        )
+    return EvalResult(
+        case_id=entry.id,
+        dimension="expected_schema_failure",
+        passed=False,
+        score=None,
+        message="Expected fallback not triggered — malformed response was accepted as valid",
+    )
 
 
 # ---------------------------------------------------------------------------

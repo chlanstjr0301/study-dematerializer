@@ -17,3 +17,8 @@ BANK_ROOT  = Path(os.getenv("GONGHAEBUN_BANK_ROOT", str(DATA_ROOT / "banks")))
 RUNS_DIR   = Path(os.getenv("GONGHAEBUN_RUNS_DIR",  str(DATA_ROOT / "runs")))
 STUDY_MD    = Path(os.getenv("GONGHAEBUN_STUDY_MD",    str(DATA_ROOT / "STUDY.md")))
 SOURCES_DIR = Path(os.getenv("GONGHAEBUN_SOURCES_DIR", str(DATA_ROOT / "sources")))
+
+# LLM grader guardrails
+LLM_MAX_CALLS_PER_SESSION = int(os.getenv("GONGHAEBUN_LLM_MAX_CALLS_PER_SESSION", "20"))
+LLM_TIMEOUT_SECONDS       = float(os.getenv("GONGHAEBUN_LLM_TIMEOUT_SECONDS", "30"))
+LLM_DISABLED              = os.getenv("GONGHAEBUN_LLM_DISABLED", "0") == "1"

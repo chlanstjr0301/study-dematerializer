@@ -6,6 +6,8 @@ or eval utilities to CLI internals.
 """
 from __future__ import annotations
 
+import os
+
 from gonghaebun.grading.answer_grader import AnswerGrader
 from gonghaebun.llm.config import DEFAULT_OPENAI_MODEL
 
@@ -43,7 +45,9 @@ def make_grader(grader: str, model: str | None = None) -> AnswerGrader:
         from gonghaebun.grading.llm_grader import LLMGrader
         from gonghaebun.llm.openai_client import OpenAIClient
         resolved_model = model if model is not None else DEFAULT_OPENAI_MODEL
-        client = OpenAIClient(model=resolved_model)
-        return LLMGrader(client)
+        max_calls = int(os.getenv("GONGHAEBUN_LLM_MAX_CALLS_PER_SESSION", "20"))
+        timeout = float(os.getenv("GONGHAEBUN_LLM_TIMEOUT_SECONDS", "30"))
+        client = OpenAIClient(model=resolved_model)  # raises LLMAPIKeyError if no key
+        return LLMGrader(client, max_calls=max_calls, timeout=timeout)
 
     raise ValueError(f"Unknown grader type: {grader!r}. Expected 'self', 'mock', or 'llm'.")
