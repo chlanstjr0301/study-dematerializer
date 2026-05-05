@@ -18,6 +18,11 @@ class HealthResponse(BaseModel):
     status: str
 
 
+class ReadyResponse(BaseModel):
+    ready: bool
+    checks: dict[str, str]
+
+
 class DueConceptItem(BaseModel):
     concept_id: str
     next_review: str | None

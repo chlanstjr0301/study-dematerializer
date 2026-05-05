@@ -1,0 +1,29 @@
+# Nginx reverse proxy template for Gonghaebun
+# This is a TEMPLATE ONLY — do not apply directly.
+# Adjust server_name, SSL certificate paths, and upstream port as needed.
+
+server {
+    listen 80;
+    server_name your-server.example.com;
+
+    # Redirect HTTP to HTTPS
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl;
+    server_name your-server.example.com;
+
+    ssl_certificate     /etc/letsencrypt/live/your-server.example.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/your-server.example.com/privkey.pem;
+    ssl_protocols       TLSv1.2 TLSv1.3;
+
+    location / {
+        proxy_pass         http://127.0.0.1:8000;
+        proxy_set_header   Host $host;
+        proxy_set_header   X-Real-IP $remote_addr;
+        proxy_set_header   X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header   X-Forwarded-Proto $scheme;
+        proxy_read_timeout 120s;
+    }
+}

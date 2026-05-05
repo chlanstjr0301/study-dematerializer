@@ -6,10 +6,16 @@ Run with:
 """
 from __future__ import annotations
 
+from pathlib import Path
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+import apps.api.config as config
 from apps.api.routers import bank, banks, concepts, health, project, sessions, sources, study_md, visualization
+
+# Module-level so tests can monkeypatch before calling create_app()
+_DIST = Path(__file__).parent.parent / "web" / "dist"
 
 
 def create_app() -> FastAPI:
@@ -19,11 +25,9 @@ def create_app() -> FastAPI:
         version="0.4.0",
     )
 
-    # Allow the Vite dev server (localhost:5173) to reach the API.
-    # No public CORS — only localhost origins are permitted.
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+        allow_origins=config.CORS_ORIGINS,
         allow_methods=["GET", "POST"],
         allow_headers=["Content-Type"],
     )
@@ -37,6 +41,36 @@ def create_app() -> FastAPI:
     app.include_router(sessions.router, prefix="/api")
     app.include_router(visualization.router, prefix="/api")
     app.include_router(concepts.router, prefix="/api")
+
+    if config.SERVE_FRONTEND:
+        dist = _DIST  # capture module-level var for closure (testable via monkeypatch)
+        if dist.exists():
+            _assets = dist / "assets"
+            if _assets.is_dir():
+                from fastapi.staticfiles import StaticFiles
+                app.mount("/assets", StaticFiles(directory=_assets), name="assets")
+
+            # SPA catch-all: registered LAST so all /api/* routes take priority
+            from fastapi import HTTPException as _HTTPException
+            from fastapi.responses import FileResponse
+
+            @app.get("/{full_path:path}", include_in_schema=False)
+            async def spa_fallback(full_path: str):
+                # Explicitly reject unknown /api/* paths — never serve SPA HTML for API routes
+                if full_path == "api" or full_path.startswith("api/"):
+                    raise _HTTPException(status_code=404, detail="API route not found")
+                # Serve actual static files (favicon.ico, vite.svg, etc.)
+                file_path = dist / full_path
+                if file_path.is_file():
+                    return FileResponse(str(file_path))
+                # SPA fallback: all other paths → index.html
+                index = dist / "index.html"
+                if not index.exists():
+                    raise _HTTPException(
+                        status_code=404,
+                        detail="Frontend not built. Run: cd apps/web && npm run build",
+                    )
+                return FileResponse(str(index))
 
     return app
 

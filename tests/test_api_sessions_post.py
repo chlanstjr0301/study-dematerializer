@@ -226,6 +226,7 @@ class TestValidationErrors:
     def test_grader_llm_no_api_key_returns_400(self, session_env, monkeypatch):
         """grader=llm with no OPENAI_API_KEY → 400 (LLMAPIKeyError caught as ValueError)."""
         import os
+        monkeypatch.setattr(session_svc.config, "LLM_DISABLED", False)
         monkeypatch.delenv("OPENAI_API_KEY", raising=False)
         payload = {
             "concept_id": "compactness",
