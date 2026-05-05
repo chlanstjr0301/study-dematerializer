@@ -104,3 +104,62 @@ class TestUploadSource:
         resp = self._upload(sources_env, "myfile.md", _MD_CONTENT)
         assert resp.status_code == 201
         assert resp.json()["document_id"] == "myfile"
+
+    def test_upload_too_large_returns_400(self, sources_env):
+        oversized = b"x" * (2 * 1024 * 1024 + 1)
+        resp = self._upload(sources_env, "big.md", oversized)
+        assert resp.status_code == 400
+
+
+# ---------------------------------------------------------------------------
+# TestBuildBankSourcePathValidation
+# ---------------------------------------------------------------------------
+# Tests source_relative_path validation in banks_service.build_bank() directly.
+# Verifies that the Option A resolver (under SOURCES_DIR) rejects traversal paths.
+
+
+@pytest.fixture()
+def bank_env(tmp_path, monkeypatch):
+    import apps.api.config as cfg
+    sources_dir = tmp_path / "sources"
+    sources_dir.mkdir()
+    monkeypatch.setattr(cfg, "SOURCES_DIR", sources_dir)
+    monkeypatch.setattr(cfg, "BANK_ROOT", tmp_path / "banks")
+    monkeypatch.setattr(cfg, "DATA_ROOT", tmp_path)
+    return sources_dir
+
+
+class TestBuildBankSourcePathValidation:
+    def _build(self, path: str):
+        from apps.api.services.banks_service import build_bank
+        return build_bank("compactness", path, "test_doc")
+
+    def test_valid_path_reaches_file_check(self, bank_env):
+        """Valid 'sources/sample.md' passes path validation and raises FileNotFoundError
+        (file absent), not ValueError (traversal rejected)."""
+        with pytest.raises(FileNotFoundError):
+            self._build("sources/sample.md")
+
+    def test_traversal_via_dotdot_returns_400(self, bank_env):
+        with pytest.raises(ValueError, match="illegal path"):
+            self._build("sources/../banks/foo.md")
+
+    def test_deep_traversal_returns_400(self, bank_env):
+        with pytest.raises(ValueError, match="illegal path"):
+            self._build("sources/../../x.md")
+
+    def test_wrong_prefix_returns_400(self, bank_env):
+        with pytest.raises(ValueError, match="must start with"):
+            self._build("banks/foo.md")
+
+    def test_dotdot_before_prefix_returns_400(self, bank_env):
+        with pytest.raises(ValueError, match="must start with"):
+            self._build("../sources/sample.md")
+
+    def test_absolute_path_returns_400(self, bank_env):
+        with pytest.raises(ValueError, match="must start with"):
+            self._build("/etc/passwd")
+
+    def test_empty_suffix_returns_400(self, bank_env):
+        with pytest.raises(ValueError, match="alone"):
+            self._build("sources/")

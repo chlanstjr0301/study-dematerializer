@@ -4,6 +4,7 @@ Service: bank build, question retrieval, review, and export.
 from __future__ import annotations
 
 import dataclasses
+from pathlib import Path
 
 import apps.api.config as config
 from apps.api.services.bank_service import safe_resolve_under
@@ -17,12 +18,23 @@ def build_bank(concept_id: str, source_relative_path: str, document_id: str) -> 
     concept_id  = validate_slug(concept_id,  field_name="concept_id")
     document_id = validate_slug(document_id, field_name="document_id")
 
-    # source_relative_path must be under sources/ — reject anything else
-    if not source_relative_path.startswith("sources/"):
+    # Resolve source_relative_path strictly under SOURCES_DIR (Option A).
+    # startswith("sources/") alone is insufficient: "sources/../banks/foo.md"
+    # passes the prefix check but resolves outside SOURCES_DIR.
+    _PREFIX = "sources/"
+    if not source_relative_path.startswith(_PREFIX):
         raise ValueError(
             f"source_relative_path must start with 'sources/'. Got: {source_relative_path!r}"
         )
-    source_path = safe_resolve_under(config.DATA_ROOT, source_relative_path)
+    _remainder = source_relative_path[len(_PREFIX):]
+    if not _remainder:
+        raise ValueError("source_relative_path must not be 'sources/' alone.")
+    _rpath = Path(_remainder)
+    if _rpath.is_absolute() or ".." in _rpath.parts:
+        raise ValueError(
+            f"source_relative_path contains illegal path components: {source_relative_path!r}"
+        )
+    source_path = safe_resolve_under(config.SOURCES_DIR, _remainder)
     if not source_path.exists():
         raise FileNotFoundError(f"Source file not found: {source_relative_path!r}")
 
