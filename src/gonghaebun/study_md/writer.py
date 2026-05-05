@@ -101,15 +101,26 @@ def apply_patch(study_md_path: Path, session: StudySession) -> None:
 
 def validate_study_md(path: Path) -> None:
     """
-    Parse the written STUDY.md and raise ValueError if it contains no concept records.
+    Parse the written STUDY.md and raise ValueError if it is empty or contains invariant errors.
 
-    Called automatically by apply_patch() after every write to catch corruption.
+    Called automatically by apply_patch() and apply_concept_compiler_patch() after every write.
+    Warnings are permitted; only hard errors (E001–E005) cause a raise.
     """
     records = parse_study_md(path)
     if not records:
         raise ValueError(
             f"STUDY.md validation failed: no concept records were parsed from {path}. "
             "The file may be corrupt or empty."
+        )
+
+    from gonghaebun.study_md.validate import validate_study_md_full
+    report = validate_study_md_full(path)
+    if not report.valid:
+        codes = ", ".join(
+            f"{e.code} on {e.concept_id or '(file)'}" for e in report.errors
+        )
+        raise ValueError(
+            f"STUDY.md invariant violations after write: {codes}"
         )
 
 

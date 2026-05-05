@@ -75,6 +75,34 @@ def _weak_sort_key(item: dict) -> tuple:
     return (mastery_rank, due_rank, item["concept_id"])
 
 
+def get_validation_report(study_md_path: Path | None = None) -> dict:
+    """
+    Run canonical-state validation on STUDY.md and return a structured report dict.
+
+    Returns valid=True with empty lists if STUDY.md is absent.
+    """
+    from gonghaebun.study_md.validate import validate_study_md_full
+
+    path = study_md_path or config.STUDY_MD
+    report = validate_study_md_full(path)
+
+    def _v(v) -> dict:
+        return {
+            "code": v.code,
+            "concept_id": v.concept_id,
+            "field": v.field,
+            "message": v.message,
+        }
+
+    return {
+        "valid": report.valid,
+        "error_count": len(report.errors),
+        "warning_count": len(report.warnings),
+        "errors": [_v(v) for v in report.errors],
+        "warnings": [_v(v) for v in report.warnings],
+    }
+
+
 def get_weak_representations(
     study_md_path: Path | None = None,
     today: date | None = None,

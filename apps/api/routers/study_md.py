@@ -1,5 +1,10 @@
 from fastapi import APIRouter
-from apps.api.schemas.api_schemas import DueConceptItem, StudyMdResponse, WeakRepItem
+from apps.api.schemas.api_schemas import (
+    DueConceptItem,
+    StudyMdResponse,
+    StudyValidationReport,
+    WeakRepItem,
+)
 from apps.api.services import study_md_service
 
 router = APIRouter()
@@ -21,3 +26,9 @@ def get_study_md() -> StudyMdResponse:
 def get_weak() -> list[WeakRepItem]:
     items = study_md_service.get_weak_representations()
     return [WeakRepItem(**item) for item in items]
+
+
+@router.get("/study/validate", response_model=StudyValidationReport)
+def get_validation() -> StudyValidationReport:
+    report = study_md_service.get_validation_report()
+    return StudyValidationReport(**report)

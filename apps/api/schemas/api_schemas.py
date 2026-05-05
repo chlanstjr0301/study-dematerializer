@@ -212,3 +212,22 @@ class WeakRepItem(BaseModel):
     last_reviewed: str | None   # YYYY-MM-DD or null
     next_review: str | None     # concept-level next_review date
     due_status: str         # overdue | due_today | upcoming | not_scheduled
+
+
+# ---------------------------------------------------------------------------
+# MVP4-H: STUDY.md Canonical State Validation
+# ---------------------------------------------------------------------------
+
+class ViolationItem(BaseModel):
+    code: str               # E001–E005, W001–W003
+    concept_id: str | None  # None = file-level violation (e.g. E005)
+    field: str | None       # "overall_mastery", "rep[formal].mastery", etc.
+    message: str
+
+
+class StudyValidationReport(BaseModel):
+    valid: bool
+    error_count: int
+    warning_count: int
+    errors: list[ViolationItem]
+    warnings: list[ViolationItem]
