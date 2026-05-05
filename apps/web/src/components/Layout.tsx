@@ -6,11 +6,11 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       <nav className="layout-nav">
         <strong>Gonghaebun</strong>
         <Link to="/">Dashboard</Link>
-        <Link to="/bank">Bank</Link>
-        <Link to="/sessions">Sessions</Link>
-        <Link to="/recall">Recall</Link>
-        <Link to="/sources">Sources</Link>
         <Link to="/concepts">Concepts</Link>
+        <Link to="/recall">Recall</Link>
+        <Link to="/sessions">Sessions</Link>
+        <Link to="/bank">Prompts</Link>
+        <Link to="/sources">Sources</Link>
       </nav>
       <main className="layout-content">{children}</main>
     </>

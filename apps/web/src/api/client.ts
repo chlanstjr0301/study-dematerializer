@@ -23,6 +23,7 @@ import type {
   CompileConceptRequest,
   CompileConceptResponse,
   WeakRepItem,
+  StudyValidationReport,
 } from './types';
 
 const BASE = '/api';
@@ -141,3 +142,10 @@ export const compileConcept = (
 
 export const getWeak = (): Promise<WeakRepItem[]> =>
   get('/weak');
+
+// ---------------------------------------------------------------------------
+// MVP4-J: STUDY.md Validation
+// ---------------------------------------------------------------------------
+
+export const getValidation = (): Promise<StudyValidationReport> =>
+  get('/study/validate');

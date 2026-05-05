@@ -67,7 +67,11 @@ export default function ConceptCompiler() {
   return (
     <main>
       <h1>Concept Compiler</h1>
-      <p>Select a seed concept and a source document to run the 8-stage compiler pipeline.</p>
+      <p style={{ fontSize: 13, color: '#6b7280', marginBottom: 16, lineHeight: 1.5 }}>
+        The Concept Compiler runs the full 8-stage Gonghaebun pipeline:{' '}
+        prerequisite graph → 5 representations → misconception check →
+        self-explanation → recall prompts → STUDY.md update.
+      </p>
 
       {/* Concept selection */}
       <section className="compiler-section">
@@ -138,13 +142,17 @@ export default function ConceptCompiler() {
               <tr><th>Representations</th><td>{result.representation_count}</td></tr>
               <tr><th>Prerequisites</th><td>{result.prerequisite_count}</td></tr>
               <tr><th>Misconceptions</th><td>{result.misconception_count}</td></tr>
-              <tr><th>Questions generated</th><td>{result.question_count}</td></tr>
+              <tr><th>Recall prompts generated</th><td>{result.question_count}</td></tr>
               <tr><th>Session ID</th><td><code>{result.session_id}</code></td></tr>
             </tbody>
           </table>
           <div className="result-links">
-            <Link to={`/review/${result.concept_id}`} className="session-link">
-              Review Questions →
+            <Link to={`/review/${result.concept_id}`} style={{
+              display: 'inline-block', padding: '8px 16px',
+              background: '#1d4ed8', color: '#fff', borderRadius: 6,
+              fontWeight: 600, fontSize: 14, textDecoration: 'none',
+            }}>
+              Review Recall Prompts →
             </Link>
             <Link to={`/sessions/${result.session_id}`} className="session-link">
               View Session Artifacts →

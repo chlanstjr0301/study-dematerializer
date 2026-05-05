@@ -168,9 +168,18 @@ export default function RecallSession() {
       {/* Questions */}
       {selected && (
         <div className="section">
-          <h2>{selected}</h2>
+          <h2>Recall: {selected}</h2>
 
-          {/* Targeting banner */}
+          {/* Mode banners */}
+          {!targetReps && !repTypeFilter && (
+            <div style={{
+              background: '#f9fafb', border: '1px solid #d1d5db',
+              borderRadius: 6, padding: '8px 14px', marginBottom: 12,
+              fontSize: 14, color: '#374151',
+            }}>
+              Mode: <strong>Full Recall</strong> — all accepted prompts for this concept
+            </div>
+          )}
           {targetReps && (
             <div style={{
               background: '#ecfdf5', border: '1px solid #6ee7b7',

@@ -29,7 +29,7 @@ export default function BankBrowser() {
 
   return (
     <div>
-      <h1>Question Bank</h1>
+      <h1>Recall Prompt Library</h1>
 
       {/* Concept selector */}
       <div className="section">
@@ -38,7 +38,7 @@ export default function BankBrowser() {
         ) : banks === null ? (
           <p className="loading">Loading banks…</p>
         ) : banks.length === 0 ? (
-          <p className="empty-state">No question banks found.</p>
+          <p className="empty-state">No recall prompt banks found.</p>
         ) : (
           <div className="concept-list">
             {banks.map((b) => (
@@ -60,17 +60,17 @@ export default function BankBrowser() {
           <h2>{selected}</h2>
           <div className="card">
             {questionsLoading ? (
-              <p className="loading">Loading questions…</p>
+              <p className="loading">Loading prompts…</p>
             ) : questionsError ? (
               <p className="error-text">{questionsError}</p>
             ) : questions === null || questions.length === 0 ? (
-              <p className="empty-state">No questions found.</p>
+              <p className="empty-state">No recall prompts found.</p>
             ) : (
               <table className="table-simple">
                 <thead>
                   <tr>
                     <th>ID</th>
-                    <th>Question</th>
+                    <th>Recall Prompt</th>
                     <th>Type</th>
                     <th>Difficulty</th>
                     <th>Status</th>

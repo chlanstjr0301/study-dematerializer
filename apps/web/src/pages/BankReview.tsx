@@ -86,7 +86,7 @@ export default function BankReview() {
   if (questionsError) {
     return (
       <div>
-        <h1>Review Bank — {conceptId}</h1>
+        <h1>Review Recall Prompts: {conceptId}</h1>
         <div className="error-box">{questionsError}</div>
       </div>
     );
@@ -95,7 +95,7 @@ export default function BankReview() {
   if (!questions) {
     return (
       <div>
-        <h1>Review Bank — {conceptId}</h1>
+        <h1>Review Recall Prompts: {conceptId}</h1>
         <p>Loading…</p>
       </div>
     );
@@ -104,8 +104,8 @@ export default function BankReview() {
   if (questions.length === 0) {
     return (
       <div>
-        <h1>Review Bank — {conceptId}</h1>
-        <p className="empty-state">No generated questions found. Build a bank first.</p>
+        <h1>Review Recall Prompts: {conceptId}</h1>
+        <p className="empty-state">No generated recall prompts found. Build a bank first.</p>
       </div>
     );
   }
@@ -114,9 +114,9 @@ export default function BankReview() {
 
   return (
     <div>
-      <h1>Review Bank — {conceptId}</h1>
+      <h1>Review Recall Prompts: {conceptId}</h1>
       <p style={{ marginBottom: 16, color: '#555', fontSize: 14 }}>
-        {questions.length} questions &nbsp;|&nbsp; {actionCount} reviewed
+        {questions.length} recall prompts &nbsp;|&nbsp; {actionCount} reviewed
       </p>
 
       {questions.map(q => {
@@ -193,7 +193,7 @@ export default function BankReview() {
             disabled={exporting}
             className="btn-primary"
           >
-            {exporting ? 'Exporting…' : 'Export Accepted'}
+            {exporting ? 'Exporting…' : 'Export Accepted Prompts'}
           </button>
 
           {exportError && <div className="error-box">{exportError}</div>}
@@ -201,7 +201,7 @@ export default function BankReview() {
           {exportResult && (
             <div style={{ marginTop: 12 }}>
               <p style={{ marginBottom: 8, fontSize: 14 }}>
-                Exported <strong>{exportResult.accepted_count}</strong> accepted question{exportResult.accepted_count !== 1 ? 's' : ''}.
+                Exported <strong>{exportResult.accepted_count}</strong> accepted recall prompt{exportResult.accepted_count !== 1 ? 's' : ''}.
               </p>
               <Link to="/recall" className="btn-primary">
                 Go to Recall &rarr;

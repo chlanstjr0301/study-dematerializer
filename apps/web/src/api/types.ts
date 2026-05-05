@@ -239,3 +239,22 @@ export interface WeakRepItem {
   next_review: string | null;
   due_status: string;         // overdue | due_today | upcoming | not_scheduled
 }
+
+// ---------------------------------------------------------------------------
+// MVP4-J: STUDY.md Validation
+// ---------------------------------------------------------------------------
+
+export interface ViolationItem {
+  code: string;
+  concept_id: string | null;
+  field: string | null;
+  message: string;
+}
+
+export interface StudyValidationReport {
+  valid: boolean;
+  error_count: number;
+  warning_count: number;
+  errors: ViolationItem[];
+  warnings: ViolationItem[];
+}
