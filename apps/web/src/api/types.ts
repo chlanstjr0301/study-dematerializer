@@ -6,6 +6,12 @@ export interface DueConceptItem {
   concept_id: string;
   next_review: string | null;
   overdue: boolean;
+  // MVP4-I scheduler enrichment
+  overall_mastery: string;
+  weak_rep_count: number;
+  target_representations: string[];
+  suggested_mode: string;   // "weak_only" | "full_recall"
+  reason: string;
 }
 
 export interface StudyMdResponse {

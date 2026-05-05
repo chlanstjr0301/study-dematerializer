@@ -12,11 +12,60 @@ from gonghaebun.study_md.parser import parse_study_md
 import apps.api.config as config
 
 
+def _build_due_item(concept_id: str, record, today: date) -> dict:
+    """Build the enriched due-review dict for a single concept."""
+    next_review = record.next_review if record else None
+
+    if next_review is None:
+        overdue = True
+    else:
+        try:
+            overdue = date.fromisoformat(next_review) < today
+        except ValueError:
+            overdue = True
+
+    overall_mastery = record.overall_mastery if record else "unknown"
+
+    # Non-solid reps sorted: unknown first, then partial; alphabetical within each level
+    weak_reps = sorted(
+        [r for r in (record.representations if record else []) if r.mastery != "solid"],
+        key=lambda r: (0 if r.mastery == "unknown" else 1, r.type),
+    )
+    target_reps = [r.type for r in weak_reps]
+    weak_count = len(target_reps)
+
+    if weak_count == 0:
+        suggested_mode = "full_recall"
+        reason = "All representations solid — periodic review"
+    else:
+        suggested_mode = "weak_only"
+        unknown_n = sum(1 for r in weak_reps if r.mastery == "unknown")
+        partial_n = weak_count - unknown_n
+        parts = []
+        if unknown_n:
+            parts.append(f"{unknown_n} unknown")
+        if partial_n:
+            parts.append(f"{partial_n} partial")
+        reason = f"{', '.join(parts)} representation(s) need practice"
+
+    return {
+        "concept_id": concept_id,
+        "next_review": next_review,
+        "overdue": overdue,
+        "overall_mastery": overall_mastery,
+        "weak_rep_count": weak_count,
+        "target_representations": target_reps,
+        "suggested_mode": suggested_mode,
+        "reason": reason,
+    }
+
+
 def get_due(study_md_path: Path | None = None) -> list[dict]:
     """
-    Return concepts due for review.
+    Return concepts due for review with scheduler enrichment.
 
-    Each item: {concept_id, next_review (ISO str or None), overdue (bool)}.
+    Each item: {concept_id, next_review, overdue, overall_mastery, weak_rep_count,
+    target_representations, suggested_mode, reason}.
     Returns [] if STUDY.md does not exist.
     """
     path = study_md_path or config.STUDY_MD
@@ -25,25 +74,12 @@ def get_due(study_md_path: Path | None = None) -> list[dict]:
 
     today = date.today()
     due_ids = get_due_concepts(path, today)
-
     records = parse_study_md(path)
-    result = []
-    for concept_id in due_ids:
-        record = records.get(concept_id)
-        next_review = record.next_review if record else None
-        if next_review is None:
-            overdue = True
-        else:
-            try:
-                overdue = date.fromisoformat(next_review) < today
-            except ValueError:
-                overdue = True
-        result.append({
-            "concept_id": concept_id,
-            "next_review": next_review,
-            "overdue": overdue,
-        })
-    return result
+
+    return [
+        _build_due_item(concept_id, records.get(concept_id), today)
+        for concept_id in due_ids
+    ]
 
 
 def read_study_md(study_md_path: Path | None = None) -> str:

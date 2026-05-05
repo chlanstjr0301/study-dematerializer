@@ -25,6 +25,10 @@ const QUESTION_TYPE_TO_REP: Record<string, string> = {
 export default function RecallSession() {
   const [searchParams] = useSearchParams();
   const repTypeFilter = searchParams.get('rep_type') ?? null;
+  const targetRepsParam = searchParams.get('target_reps');
+  const targetReps: string[] | null = targetRepsParam
+    ? targetRepsParam.split(',').filter(Boolean)
+    : null;
 
   const [banks, setBanks] = useState<BankSummaryItem[] | null>(null);
   const [banksError, setBanksError] = useState<string | null>(null);
@@ -121,11 +125,13 @@ export default function RecallSession() {
       });
   }
 
-  // Derived: filter questions by rep_type if ?rep_type= param is present
+  // Derived: filter questions by targeting params (priority: target_reps > rep_type > none)
   const displayedQuestions: QuestionItem[] = questions
-    ? (repTypeFilter
-        ? questions.filter(q => QUESTION_TYPE_TO_REP[q.question_type] === repTypeFilter)
-        : questions)
+    ? (targetReps
+        ? questions.filter(q => targetReps.includes(QUESTION_TYPE_TO_REP[q.question_type] ?? ''))
+        : repTypeFilter
+            ? questions.filter(q => QUESTION_TYPE_TO_REP[q.question_type] === repTypeFilter)
+            : questions)
     : [];
 
   const submitDisabled = !selected || displayedQuestions.length === 0 || submitting;
@@ -165,7 +171,16 @@ export default function RecallSession() {
           <h2>{selected}</h2>
 
           {/* Targeting banner */}
-          {repTypeFilter && (
+          {targetReps && (
+            <div style={{
+              background: '#ecfdf5', border: '1px solid #6ee7b7',
+              borderRadius: 6, padding: '8px 14px', marginBottom: 12,
+              fontSize: 14, color: '#065f46',
+            }}>
+              Due review: targeting <strong>{targetReps.join(', ')}</strong> representation(s)
+            </div>
+          )}
+          {!targetReps && repTypeFilter && (
             <div style={{
               background: '#eff6ff', border: '1px solid #bfdbfe',
               borderRadius: 6, padding: '8px 14px', marginBottom: 12,
@@ -183,8 +198,12 @@ export default function RecallSession() {
             <p className="empty-state">No accepted questions found.</p>
           ) : displayedQuestions.length === 0 ? (
             <p className="empty-state">
-              No accepted questions target the <strong>{repTypeFilter}</strong> representation.
-              Use the Concept Compiler to generate and accept questions first.
+              {targetReps
+                ? <>No accepted questions target the due representations (<strong>{targetReps.join(', ')}</strong>).
+                    {' '}Use the Concept Compiler to generate and accept questions first.</>
+                : <>No accepted questions target the <strong>{repTypeFilter}</strong> representation.
+                    {' '}Use the Concept Compiler to generate and accept questions first.</>
+              }
             </p>
           ) : (
             <>

@@ -22,6 +22,12 @@ class DueConceptItem(BaseModel):
     concept_id: str
     next_review: str | None
     overdue: bool
+    # MVP4-I: scheduler enrichment
+    overall_mastery: str                # unknown | partial | solid
+    weak_rep_count: int                 # len(target_representations)
+    target_representations: list[str]   # non-solid rep types sorted: unknown first, then partial
+    suggested_mode: str                 # "weak_only" | "full_recall"
+    reason: str                         # human-readable summary
 
 
 class StudyMdResponse(BaseModel):

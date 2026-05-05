@@ -67,28 +67,40 @@ export default function Dashboard() {
               <thead>
                 <tr>
                   <th>Concept</th>
-                  <th>Next review</th>
+                  <th>Mastery</th>
+                  <th>Weak Reps</th>
+                  <th>Next Review</th>
                   <th>Status</th>
                   <th></th>
                 </tr>
               </thead>
               <tbody>
-                {due.map((item) => (
-                  <tr key={item.concept_id}>
-                    <td>{item.concept_id}</td>
-                    <td>{item.next_review ?? '—'}</td>
-                    <td>
-                      <span className={item.overdue ? 'badge badge-overdue' : 'badge'}>
-                        {item.overdue ? 'overdue' : 'due'}
-                      </span>
-                    </td>
-                    <td>
-                      <Link to={`/recall?concept=${item.concept_id}`} className="session-link">
-                        Review Now →
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
+                {due.map((item) => {
+                  const href = item.suggested_mode === 'weak_only' && item.target_representations.length > 0
+                    ? `/recall?concept=${item.concept_id}&target_reps=${item.target_representations.join(',')}`
+                    : `/recall?concept=${item.concept_id}`;
+                  const label = item.suggested_mode === 'weak_only' ? 'Review Weak →' : 'Full Review →';
+                  const masteryClass =
+                    item.overall_mastery === 'solid' ? 'badge badge-ok' :
+                    item.overall_mastery === 'partial' ? 'badge badge-partial' :
+                    'badge badge-overdue';
+                  return (
+                    <tr key={item.concept_id}>
+                      <td>{item.concept_id}</td>
+                      <td><span className={masteryClass}>{item.overall_mastery}</span></td>
+                      <td>{item.weak_rep_count > 0 ? item.weak_rep_count : '—'}</td>
+                      <td>{item.next_review ?? '—'}</td>
+                      <td>
+                        <span className={item.overdue ? 'badge badge-overdue' : 'badge'}>
+                          {item.overdue ? 'overdue' : 'due'}
+                        </span>
+                      </td>
+                      <td>
+                        <Link to={href} className="session-link">{label}</Link>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           )}
