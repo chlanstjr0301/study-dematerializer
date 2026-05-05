@@ -12,7 +12,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 import apps.api.config as config
-from apps.api.routers import bank, banks, concepts, health, project, sessions, sources, study_md, visualization
+from apps.api.routers import bank, banks, compiler, concepts, health, project, sessions, sources, study_md, visualization
 
 # Module-level so tests can monkeypatch before calling create_app()
 _DIST = Path(__file__).parent.parent / "web" / "dist"
@@ -41,6 +41,7 @@ def create_app() -> FastAPI:
     app.include_router(sessions.router, prefix="/api")
     app.include_router(visualization.router, prefix="/api")
     app.include_router(concepts.router, prefix="/api")
+    app.include_router(compiler.router, prefix="/api")
 
     if config.SERVE_FRONTEND:
         dist = _DIST  # capture module-level var for closure (testable via monkeypatch)

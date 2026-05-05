@@ -148,7 +148,33 @@ export default function RecallSession() {
         ) : banks === null ? (
           <p className="loading">Loading banks…</p>
         ) : banks.length === 0 ? (
-          <p className="empty-state">No accepted question banks found.</p>
+          <div className="card">
+            <h3>아직 인출 연습 문제가 없습니다.</h3>
+            <p style={{ margin: '12px 0', fontSize: 14, color: '#555', lineHeight: 1.6 }}>
+              인출 연습을 시작하려면 먼저 자료를 업로드하고 문제은행을 만든 뒤,
+              사용할 질문을 승인해야 합니다.
+            </p>
+            {searchParams.get('concept') && (
+              <p style={{ fontSize: 13, color: '#888', marginBottom: 12 }}>
+                현재 선택된 개념: <strong>{searchParams.get('concept')}</strong>
+              </p>
+            )}
+            <p style={{ fontSize: 13, color: '#888', marginBottom: 16 }}>
+              고급 기능에서 문제은행을 준비할 수 있습니다.
+              <br />
+              <span style={{ fontSize: 12, color: '#aaa' }}>
+                개발자 도구 &gt; 소스 관리에서 자료 업로드 → 문제은행 생성 → 승인 후 사용할 수 있습니다.
+              </span>
+            </p>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <Link className="submit-btn" to="/sources" style={{ textDecoration: 'none', fontSize: 14 }}>
+                소스 관리로 이동
+              </Link>
+              <Link className="submit-btn" to="/" style={{ textDecoration: 'none', fontSize: 14, background: '#64748b' }}>
+                공부하기로 돌아가기
+              </Link>
+            </div>
+          </div>
         ) : (
           <div className="concept-list">
             {banks.map((b) => (
@@ -364,7 +390,7 @@ export default function RecallSession() {
             <Link className="session-link" to={`/sessions/${result.session_id}`}>
               View Session Detail →
             </Link>
-            <Link className="session-link" to="/">
+            <Link className="session-link" to="/dashboard">
               Back to Dashboard →
             </Link>
           </div>

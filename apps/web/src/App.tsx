@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './components/Layout';
+import ChatCompiler from './pages/ChatCompiler';
 import Dashboard from './pages/Dashboard';
 import BankBrowser from './pages/BankBrowser';
 import SessionHistory from './pages/SessionHistory';
@@ -14,7 +15,8 @@ export default function App() {
     <BrowserRouter>
       <Layout>
         <Routes>
-          <Route path="/" element={<Dashboard />} />
+          <Route path="/" element={<ChatCompiler />} />
+          <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/bank" element={<BankBrowser />} />
           <Route path="/sessions" element={<SessionHistory />} />
           <Route path="/sessions/:sessionId" element={<SessionDetail />} />

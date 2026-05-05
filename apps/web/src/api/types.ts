@@ -258,3 +258,38 @@ export interface StudyValidationReport {
   errors: ViolationItem[];
   warnings: ViolationItem[];
 }
+
+// ---------------------------------------------------------------------------
+// MVP4-R0: Chat Compiler Analyzer
+// ---------------------------------------------------------------------------
+
+export interface AnalyzeRequest {
+  message: string;
+  source_id?: string;
+}
+
+export interface PrerequisiteCheck {
+  concept_id: string;
+  name_ko: string;
+  name_en: string;
+  status: string;
+}
+
+export interface RecommendedAction {
+  action_id: string;
+  label_ko: string;
+  description_ko: string;
+  route: string | null;
+}
+
+export interface AnalyzeResponse {
+  language: string;
+  concept_id: string | null;
+  canonical_name_ko: string | null;
+  canonical_name_en: string | null;
+  suspected_gap: string;
+  correction: string | null;
+  prerequisite_checks: PrerequisiteCheck[];
+  recommended_actions: RecommendedAction[];
+  representations: Record<string, string> | null;
+}

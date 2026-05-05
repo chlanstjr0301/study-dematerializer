@@ -242,3 +242,38 @@ class StudyValidationReport(BaseModel):
     warning_count: int
     errors: list[ViolationItem]
     warnings: list[ViolationItem]
+
+
+# ---------------------------------------------------------------------------
+# MVP4-R0: Chat Compiler Analyzer
+# ---------------------------------------------------------------------------
+
+class AnalyzeRequest(BaseModel):
+    message: str
+    source_id: str | None = None
+
+
+class PrerequisiteCheck(BaseModel):
+    concept_id: str
+    name_ko: str
+    name_en: str
+    status: str  # "미확인"
+
+
+class RecommendedAction(BaseModel):
+    action_id: str
+    label_ko: str
+    description_ko: str
+    route: str | None = None  # None = inline action, no navigation
+
+
+class AnalyzeResponse(BaseModel):
+    language: str  # always "ko"
+    concept_id: str | None
+    canonical_name_ko: str | None
+    canonical_name_en: str | None
+    suspected_gap: str
+    correction: str | None = None
+    prerequisite_checks: list[PrerequisiteCheck]
+    recommended_actions: list[RecommendedAction]
+    representations: dict[str, str] | None = None

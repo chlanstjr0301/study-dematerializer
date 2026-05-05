@@ -24,6 +24,8 @@ import type {
   CompileConceptResponse,
   WeakRepItem,
   StudyValidationReport,
+  AnalyzeRequest,
+  AnalyzeResponse,
 } from './types';
 
 const BASE = '/api';
@@ -149,3 +151,10 @@ export const getWeak = (): Promise<WeakRepItem[]> =>
 
 export const getValidation = (): Promise<StudyValidationReport> =>
   get('/study/validate');
+
+// ---------------------------------------------------------------------------
+// MVP4-R0: Chat Compiler Analyzer
+// ---------------------------------------------------------------------------
+
+export const analyzeMessage = (req: AnalyzeRequest): Promise<AnalyzeResponse> =>
+  post('/compiler/analyze', req);
