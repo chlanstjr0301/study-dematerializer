@@ -310,7 +310,7 @@ def submit_recall(
 ) -> dict:
     """Evaluate White Recall submission."""
     from gonghaebun.llm.factory import get_llm_client
-    from gonghaebun.models.session_models import RecallEvaluation
+    from gonghaebun.pipeline.evaluation_schema import EVALUATION_OUTPUT_SCHEMA, validate_evaluation_output
     from gonghaebun.prompts import load_prompt
 
     _runs_dir = runs_dir or config.RUNS_DIR
@@ -344,13 +344,8 @@ def submit_recall(
         f"## Learner Explanation\n{learner_response}\n\n"
         f"__fixture__:{concept_id}/recall_eval"
     )
-    data = llm.complete_json(system, user)
-    evaluation = RecallEvaluation(
-        accuracy_score=float(data.get("accuracy_score", 0.0)),
-        missing_elements=data.get("missing_elements", []),
-        errors=data.get("errors", []),
-        feedback=data.get("feedback", ""),
-    )
+    data = llm.complete_structured(system, user, EVALUATION_OUTPUT_SCHEMA)
+    evaluation = validate_evaluation_output(data)
 
     # Store in state
     state["recall_evaluation"] = {

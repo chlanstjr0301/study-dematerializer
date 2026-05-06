@@ -5,6 +5,8 @@ from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException
 
+from gonghaebun.llm.errors import LLMError, LLMResponseError
+
 from apps.api.schemas.api_schemas import (
     AdvanceStepRequest,
     AdvanceStepResponse,
@@ -102,6 +104,8 @@ def self_explain(session_id: str, req: SelfExplainRequest):
         raise HTTPException(status_code=404, detail=f"세션을 찾을 수 없습니다: {session_id}")
     except ConflictError as e:
         raise HTTPException(status_code=409, detail=str(e))
+    except (LLMResponseError, LLMError) as e:
+        raise HTTPException(status_code=502, detail=f"LLM 평가 응답이 유효하지 않습니다: {e}")
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     return SelfExplainResponse(**result)
@@ -118,6 +122,8 @@ def recall_submit(session_id: str, req: RecallSubmitRequest):
         raise HTTPException(status_code=404, detail=f"세션을 찾을 수 없습니다: {session_id}")
     except ConflictError as e:
         raise HTTPException(status_code=409, detail=str(e))
+    except (LLMResponseError, LLMError) as e:
+        raise HTTPException(status_code=502, detail=f"LLM 평가 응답이 유효하지 않습니다: {e}")
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     return RecallSubmitResponse(**result)
