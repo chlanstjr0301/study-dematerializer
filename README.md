@@ -46,9 +46,24 @@ See `docs/deployment/PRODUCTION_HARDENING.md` for production setup.
 python -m pytest tests/ -q
 ```
 
+## Study Session (MVP5)
+
+통합 학습 세션: 개념 입력 → 진단 → 선행 확인 → 5표현 학습 → 오개념 체크 → 인출 연습 → STUDY.md 업데이트.
+
+```bash
+# 소스 준비 (최초 1회)
+mkdir -p data/gonghaebun/default/sources
+cp tests/data/sample_source.md data/gonghaebun/default/sources/
+
+# 실행 후 http://localhost:5173 에서 "옹골성" 입력
+```
+
+자세한 사용법: [docs/MVP5_HANDOFF.md](docs/MVP5_HANDOFF.md)
+
 ## Project status
 
 - MVP1–MVP4: Source → Bank → Review → Recall → Mastery pipeline complete
+- MVP5: Integrated 6-step study session with self-explanation + White Recall
 - LLM grading with trace audit (disabled by default; set `GONGHAEBUN_LLM_DISABLED=0` + `OPENAI_API_KEY`)
 - REST API (FastAPI) + React frontend
 

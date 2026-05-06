@@ -86,7 +86,7 @@ export default function Dashboard() {
       return { type: 'weak' as const, label: `강화: ${weak.length}개 취약 표현`, href };
     }
     if (due !== null && weak !== null) {
-      return { type: 'done' as const, label: '모든 표현 최신. 다음 개념 컴파일 →', href: '/concepts' };
+      return { type: 'done' as const, label: '모든 표현 최신. 새 개념 공부하기 →', href: '/' };
     }
     return null;  // still loading
   })();

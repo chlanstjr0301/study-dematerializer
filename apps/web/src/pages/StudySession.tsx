@@ -373,6 +373,7 @@ export default function StudySession() {
               completing={completing}
               completionResult={completionResult}
               completionError={completionError}
+              onGoToStep={(step) => setViewingStep(step)}
             />
           )}
         </div>

@@ -10,6 +10,7 @@ interface SessionSummaryStepProps {
   completing: boolean;
   completionResult: CompleteStudySessionResponse | null;
   completionError: string | null;
+  onGoToStep?: (step: number) => void;
 }
 
 const REP_LABELS: Record<string, string> = {
@@ -37,6 +38,7 @@ export default function SessionSummaryStep({
   completing,
   completionResult,
   completionError,
+  onGoToStep,
 }: SessionSummaryStepProps) {
   void _conceptId;
   void _canonicalNameKo;
@@ -72,14 +74,28 @@ export default function SessionSummaryStep({
           </p>
           <p style={{ fontSize: 13, color: '#991b1b' }}>{completionError}</p>
           {(completionError.includes('formal') || completionError.includes('proof_schema') || completionError.includes('자기 설명')) && (
-            <p style={{ fontSize: 13, color: '#92400e', marginTop: 8 }}>
-              표현 학습 단계로 돌아가서 formal, proof_schema 자기 설명을 제출해 주세요.
-            </p>
+            <div style={{ marginTop: 8 }}>
+              <p style={{ fontSize: 13, color: '#92400e' }}>
+                표현 학습 단계로 돌아가서 formal, proof_schema 자기 설명을 제출해 주세요.
+              </p>
+              {onGoToStep && (
+                <button className="submit-btn" style={{ marginTop: 8, background: '#d97706', fontSize: 13 }} onClick={() => onGoToStep(3)}>
+                  표현 학습으로 돌아가기
+                </button>
+              )}
+            </div>
           )}
           {completionError.includes('인출') && (
-            <p style={{ fontSize: 13, color: '#92400e', marginTop: 8 }}>
-              인출 연습 단계로 돌아가서 인출 응답을 제출해 주세요.
-            </p>
+            <div style={{ marginTop: 8 }}>
+              <p style={{ fontSize: 13, color: '#92400e' }}>
+                인출 연습 단계로 돌아가서 인출 응답을 제출해 주세요.
+              </p>
+              {onGoToStep && (
+                <button className="submit-btn" style={{ marginTop: 8, background: '#d97706', fontSize: 13 }} onClick={() => onGoToStep(5)}>
+                  인출 연습으로 돌아가기
+                </button>
+              )}
+            </div>
           )}
         </div>
         <button className="submit-btn" style={{ background: '#64748b' }} onClick={onComplete}>
