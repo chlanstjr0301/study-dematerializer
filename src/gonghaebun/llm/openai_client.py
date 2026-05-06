@@ -11,9 +11,15 @@ from __future__ import annotations
 
 import json
 import os
+import time
 
 from gonghaebun.llm.base import LLMClient
 from gonghaebun.llm.errors import LLMAPIKeyError, LLMError, LLMResponseError
+from gonghaebun.llm.prompt_utils import strip_fixture_marker
+
+_RETRYABLE_STATUS_CODES = (429, 500, 502, 503, 504)
+_MAX_RETRIES = 2
+_BACKOFF_SECONDS = (1, 3)
 
 
 class OpenAIClient(LLMClient):
@@ -22,7 +28,9 @@ class OpenAIClient(LLMClient):
 
     Args:
         api_key: OpenAI API key. Falls back to OPENAI_API_KEY env var.
-        model:   Model ID (default: "gpt-4o-mini").
+        model:   Model ID (default: "gpt-5.5").
+        timeout: Per-call timeout in seconds. Falls back to
+                 GONGHAEBUN_LLM_TIMEOUT_SECONDS env var (default: 30).
 
     Raises:
         LLMAPIKeyError: if api_key is None or empty after env-var lookup.
@@ -32,7 +40,8 @@ class OpenAIClient(LLMClient):
     def __init__(
         self,
         api_key: str | None = None,
-        model: str = "gpt-4o-mini",
+        model: str = "gpt-5.5",
+        timeout: float | None = None,
     ) -> None:
         resolved_key = api_key or os.environ.get("OPENAI_API_KEY")
         if not resolved_key:
@@ -51,25 +60,22 @@ class OpenAIClient(LLMClient):
 
         self._model = model
         self._api_key = resolved_key
-        self._client = openai.OpenAI(api_key=resolved_key)
+        self._timeout = timeout or float(
+            os.getenv("GONGHAEBUN_LLM_TIMEOUT_SECONDS", "30")
+        )
+        self._client = openai.OpenAI(api_key=resolved_key, timeout=self._timeout)
 
     def complete(self, system: str, user: str) -> str:
         """
         Return a plain-text completion using the OpenAI Responses API.
 
-        Raises:
-            LLMError: if the OpenAI API returns an error.
+        Strips __fixture__ markers before sending to API.
+        Retries on transient errors (429/5xx) up to 2 times with backoff.
         """
-        try:
-            import openai  # noqa: PLC0415
-            response = self._client.responses.create(
-                model=self._model,
-                instructions=system,
-                input=user,
-            )
-            return response.output_text
-        except openai.APIError as exc:
-            raise LLMError(f"OpenAI API error: {exc}") from exc
+        clean_user = strip_fixture_marker(user)
+        return self._call_with_retry(
+            lambda: self._do_complete(system, clean_user)
+        )
 
     def complete_json(self, system: str, user: str) -> dict:
         """
@@ -91,37 +97,69 @@ class OpenAIClient(LLMClient):
         """
         Call the OpenAI Responses API with provider-level JSON schema enforcement.
 
-        Uses the text.format json_schema option to guarantee the response
-        matches the provided schema. Returns the parsed dict.
-
-        Raises:
-            LLMResponseError: if the response cannot be parsed as JSON
-                              (should not occur with schema enforcement, but
-                              included as a safety net).
-            LLMError:         if the OpenAI API returns an error.
+        Strips __fixture__ markers before sending to API.
+        Retries on transient errors (429/5xx) up to 2 times with backoff.
         """
-        try:
-            import openai  # noqa: PLC0415
-            response = self._client.responses.create(
-                model=self._model,
-                instructions=system,
-                input=user,
-                text={
-                    "format": {
-                        "type": "json_schema",
-                        "name": "grading_output",
-                        "schema": json_schema,
-                        "strict": True,
-                    }
-                },
-            )
-            raw = response.output_text
-        except openai.APIError as exc:
-            raise LLMError(f"OpenAI API error: {exc}") from exc
+        clean_user = strip_fixture_marker(user)
 
+        def _call():
+            import openai  # noqa: PLC0415
+            try:
+                response = self._client.responses.create(
+                    model=self._model,
+                    instructions=system,
+                    input=clean_user,
+                    text={
+                        "format": {
+                            "type": "json_schema",
+                            "name": "grading_output",
+                            "schema": json_schema,
+                            "strict": True,
+                        }
+                    },
+                )
+                return response.output_text
+            except openai.APIError as exc:
+                raise LLMError(f"OpenAI API error: {exc}") from exc
+
+        raw = self._call_with_retry(_call)
         try:
             return json.loads(raw)
         except json.JSONDecodeError as exc:
             raise LLMResponseError(
                 f"OpenAI structured response is not valid JSON: {raw!r}"
             ) from exc
+
+    # --- Private helpers ---
+
+    def _do_complete(self, system: str, user: str) -> str:
+        import openai  # noqa: PLC0415
+        try:
+            response = self._client.responses.create(
+                model=self._model,
+                instructions=system,
+                input=user,
+            )
+            return response.output_text
+        except openai.APIError as exc:
+            raise LLMError(f"OpenAI API error: {exc}") from exc
+
+    def _call_with_retry(self, fn):
+        """Retry fn() on transient LLMError up to _MAX_RETRIES times."""
+        last_exc: Exception | None = None
+        for attempt in range(_MAX_RETRIES + 1):
+            try:
+                return fn()
+            except LLMError as exc:
+                last_exc = exc
+                if attempt < _MAX_RETRIES and self._is_retryable(exc):
+                    time.sleep(_BACKOFF_SECONDS[attempt])
+                    continue
+                raise
+        raise last_exc  # pragma: no cover — unreachable
+
+    @staticmethod
+    def _is_retryable(exc: LLMError) -> bool:
+        """Check if the error message indicates a retryable status code."""
+        msg = str(exc)
+        return any(str(code) in msg for code in _RETRYABLE_STATUS_CODES)

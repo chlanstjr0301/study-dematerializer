@@ -119,12 +119,12 @@ class TestOpenAIClientInit:
         client = OpenAIClient()
         assert client._api_key == "sk-from-env"
 
-    def test_default_model_is_gpt_4o_mini(self, monkeypatch):
+    def test_default_model_is_gpt_5_5(self, monkeypatch):
         monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
         from gonghaebun.llm.openai_client import OpenAIClient
 
         client = OpenAIClient(api_key="sk-test")
-        assert client._model == "gpt-4o-mini"
+        assert client._model == "gpt-5.5"
 
     def test_custom_model_stored(self, monkeypatch):
         monkeypatch.delenv("OPENAI_API_KEY", raising=False)

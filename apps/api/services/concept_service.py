@@ -12,7 +12,7 @@ import apps.api.config as config
 from apps.api.services.bank_service import safe_resolve_under
 from apps.api.services.path_utils import validate_slug
 from gonghaebun.knowledge.real_analysis import CONCEPTS
-from gonghaebun.llm.mock import MockLLMClient
+from gonghaebun.llm.factory import get_llm_client
 from gonghaebun.pipeline.concept_resolver import ConceptNotFoundError, resolve_concept
 from gonghaebun.pipeline.io import save_questions
 from gonghaebun.pipeline.recall_orchestrator import convert_tasks_to_questions
@@ -60,10 +60,7 @@ def compile_concept(
     Raises:
         ValueError: invalid slug or source path outside sources/
         ConceptNotFoundError: unknown concept_id
-        HTTPException(501): grader != "mock"
     """
-    from fastapi import HTTPException
-
     _bank_root = bank_root or config.BANK_ROOT
     _runs_dir = runs_dir or config.RUNS_DIR
     _study_md = study_md or config.STUDY_MD
@@ -71,9 +68,6 @@ def compile_concept(
 
     validate_slug(concept_id, field_name="concept_id")
     validate_slug(document_id, field_name="document_id")
-
-    if grader != "mock":
-        raise HTTPException(status_code=501, detail=f"grader={grader!r} not yet supported. Use 'mock'.")
 
     # Source path must be under sources/
     if not source_relative_path.startswith("sources/"):
@@ -92,7 +86,7 @@ def compile_concept(
     output_dir = _runs_dir / session_id
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    llm = MockLLMClient()
+    llm = get_llm_client()
     run_new_concept_session(
         concept_input=concept_id,
         source_path=source_path,

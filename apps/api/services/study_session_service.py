@@ -42,7 +42,7 @@ def create_study_session(
 
     Returns a dict matching CreateStudySessionResponse.
     """
-    from gonghaebun.llm.mock import MockLLMClient
+    from gonghaebun.llm.factory import get_llm_client
     from gonghaebun.pipeline.concept_resolver import ConceptNotFoundError, resolve_concept
     from gonghaebun.pipeline.io import save_questions
     from gonghaebun.pipeline.recall_orchestrator import convert_tasks_to_questions
@@ -72,7 +72,7 @@ def create_study_session(
     output_dir.mkdir(parents=True, exist_ok=True)
 
     # 5. Run full 8-stage pipeline
-    llm = MockLLMClient()
+    llm = get_llm_client()
     run_new_concept_session(
         concept_input=concept_id,
         source_path=source_path,
@@ -249,7 +249,7 @@ def submit_self_explanation(
     runs_dir: Path | None = None,
 ) -> dict:
     """Evaluate a self-explanation for one representation type."""
-    from gonghaebun.llm.mock import MockLLMClient
+    from gonghaebun.llm.factory import get_llm_client
     from gonghaebun.pipeline.self_explanation import evaluate_self_explanation
 
     _runs_dir = runs_dir or config.RUNS_DIR
@@ -272,7 +272,7 @@ def submit_self_explanation(
     target_content = representations.get(representation_type, "")
 
     # Evaluate
-    llm = MockLLMClient()
+    llm = get_llm_client()
     evaluation = evaluate_self_explanation(
         concept_id=state["concept_id"],
         representation_type=representation_type,
@@ -309,7 +309,7 @@ def submit_recall(
     runs_dir: Path | None = None,
 ) -> dict:
     """Evaluate White Recall submission."""
-    from gonghaebun.llm.mock import MockLLMClient
+    from gonghaebun.llm.factory import get_llm_client
     from gonghaebun.models.session_models import RecallEvaluation
     from gonghaebun.prompts import load_prompt
 
@@ -332,7 +332,7 @@ def submit_recall(
     )
 
     # Evaluate using recall_eval fixture
-    llm = MockLLMClient()
+    llm = get_llm_client()
     concept_id = state["concept_id"]
     system = load_prompt("global_system")
     stage5_prompt = load_prompt("stage5_self_explanation_evaluator")

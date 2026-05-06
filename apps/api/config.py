@@ -22,6 +22,8 @@ SOURCES_DIR = Path(os.getenv("GONGHAEBUN_SOURCES_DIR", str(DATA_ROOT / "sources"
 LLM_MAX_CALLS_PER_SESSION = int(os.getenv("GONGHAEBUN_LLM_MAX_CALLS_PER_SESSION", "20"))
 LLM_TIMEOUT_SECONDS       = float(os.getenv("GONGHAEBUN_LLM_TIMEOUT_SECONDS", "30"))
 LLM_DISABLED              = os.getenv("GONGHAEBUN_LLM_DISABLED", "1") == "1"
+LLM_PROVIDER              = os.getenv("GONGHAEBUN_LLM_PROVIDER", "mock")
+LLM_MODEL                 = os.getenv("GONGHAEBUN_LLM_MODEL", "gpt-5.5")
 
 # Server
 CORS_ORIGINS = [
