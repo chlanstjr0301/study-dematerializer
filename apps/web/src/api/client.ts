@@ -33,6 +33,11 @@ import type {
   AdvanceStepRequest,
   AdvanceStepResponse,
   StudySessionStateResponse,
+  SelfExplainRequest,
+  SelfExplainResponse,
+  RecallSubmitRequest,
+  RecallSubmitResponse,
+  CompleteStudySessionResponse,
 } from './types';
 
 const BASE = '/api';
@@ -181,3 +186,16 @@ export const submitStudyDiagnosis = (sessionId: string, req: DiagnoseRequest): P
 
 export const advanceStudySessionStep = (sessionId: string, req: AdvanceStepRequest): Promise<AdvanceStepResponse> =>
   post(`/study-session/${sessionId}/advance`, req);
+
+// ---------------------------------------------------------------------------
+// MVP5-4: Study Session Completion Loop
+// ---------------------------------------------------------------------------
+
+export const submitSelfExplanation = (sessionId: string, req: SelfExplainRequest): Promise<SelfExplainResponse> =>
+  post(`/study-session/${sessionId}/self-explain`, req);
+
+export const submitRecall = (sessionId: string, req: RecallSubmitRequest): Promise<RecallSubmitResponse> =>
+  post(`/study-session/${sessionId}/recall`, req);
+
+export const completeStudySession = (sessionId: string): Promise<CompleteStudySessionResponse> =>
+  post(`/study-session/${sessionId}/complete`, {});

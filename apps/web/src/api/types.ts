@@ -371,3 +371,48 @@ export interface StudySessionStateResponse {
   created_at: string;
   updated_at: string;
 }
+
+// ---------------------------------------------------------------------------
+// MVP5-4: Study Session Completion Loop
+// ---------------------------------------------------------------------------
+
+export interface SelfExplainRequest {
+  representation_type: string;
+  learner_explanation: string;
+}
+
+export interface SelfExplainResponse {
+  representation_type: string;
+  accuracy_score: number;
+  missing_elements: string[];
+  errors: string[];
+  feedback: string;
+}
+
+export interface RecallSubmitRequest {
+  learner_response: string;
+}
+
+export interface RecallSubmitResponse {
+  accuracy_score: number;
+  missing_elements: string[];
+  errors: string[];
+  feedback: string;
+}
+
+export interface MasteryUpdateItem {
+  representation_type: string;
+  before: string;
+  after: string;
+  accuracy_score: number;
+}
+
+export interface CompleteStudySessionResponse {
+  session_id: string;
+  completed: boolean;
+  mastery_updates: MasteryUpdateItem[];
+  next_review_date: string;
+  study_md_updated: boolean;
+  study_patch_path: string | null;
+  completion_summary: string;
+}

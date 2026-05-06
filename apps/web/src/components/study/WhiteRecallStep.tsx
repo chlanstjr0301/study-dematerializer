@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react';
 import { getBank } from '../../api/client';
-import type { QuestionItem } from '../../api/types';
+import type { QuestionItem, RecallSubmitResponse } from '../../api/types';
 
 interface WhiteRecallStepProps {
   conceptId: string;
+  onSubmitRecall: (learnerResponse: string) => Promise<RecallSubmitResponse>;
   onNext: () => void;
+  recallResult: RecallSubmitResponse | null;
+  recallSubmitting: boolean;
   advancing?: boolean;
   readOnly?: boolean;
 }
@@ -20,7 +23,10 @@ const QUESTION_TYPE_LABELS: Record<string, string> = {
 
 export default function WhiteRecallStep({
   conceptId,
+  onSubmitRecall,
   onNext,
+  recallResult,
+  recallSubmitting,
   advancing = false,
   readOnly = false,
 }: WhiteRecallStepProps) {
@@ -36,6 +42,11 @@ export default function WhiteRecallStep({
       .catch(() => {})
       .finally(() => setLoadingQuestions(false));
   }, [conceptId]);
+
+  async function handleSubmit() {
+    if (!recall.trim()) return;
+    await onSubmitRecall(recall);
+  }
 
   return (
     <div>
@@ -79,24 +90,85 @@ export default function WhiteRecallStep({
         onChange={(e) => setRecall(e.target.value)}
         placeholder="이 개념을 처음부터 설명해 보세요. 정의, 핵심 아이디어, 예시, 증명 구조 등을 자유롭게 작성하세요..."
         style={{ minHeight: 200 }}
-        disabled={readOnly}
+        disabled={readOnly || !!recallResult}
       />
 
-      {!readOnly && (
+      {/* Submit button — only before recall is evaluated */}
+      {!readOnly && !recallResult && (
         <button
           className="submit-btn"
-          onClick={onNext}
-          disabled={!recall.trim() || advancing}
+          onClick={handleSubmit}
+          disabled={!recall.trim() || recallSubmitting}
           style={{ marginTop: 16 }}
         >
-          {advancing ? '처리 중...' : '제출'}
+          {recallSubmitting ? '평가 중...' : '제출'}
         </button>
       )}
 
-      {!readOnly && !recall.trim() && (
+      {!readOnly && !recallResult && !recall.trim() && (
         <p style={{ fontSize: 13, color: '#94a3b8', marginTop: 8 }}>
           내용을 작성하면 제출할 수 있습니다.
         </p>
+      )}
+
+      {/* Recall evaluation result */}
+      {recallResult && (
+        <div style={{
+          background: '#f0fdf4', border: '1px solid #bbf7d0',
+          borderRadius: 8, padding: '16px 20px', marginTop: 16,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+            <span style={{ fontSize: 14, fontWeight: 600, color: '#15803d' }}>
+              인출 평가 결과
+            </span>
+            <span style={{
+              fontSize: 12, padding: '2px 8px', borderRadius: 4,
+              background: recallResult.accuracy_score >= 0.85 ? '#bbf7d0' :
+                recallResult.accuracy_score >= 0.5 ? '#fef3c7' : '#fecaca',
+              color: recallResult.accuracy_score >= 0.85 ? '#15803d' :
+                recallResult.accuracy_score >= 0.5 ? '#92400e' : '#b91c1c',
+            }}>
+              정확도: {Math.round(recallResult.accuracy_score * 100)}%
+            </span>
+          </div>
+          {recallResult.feedback && (
+            <p style={{ fontSize: 13, color: '#374151', marginBottom: 8 }}>
+              {recallResult.feedback}
+            </p>
+          )}
+          {recallResult.missing_elements.length > 0 && (
+            <div style={{ fontSize: 12, color: '#92400e', marginTop: 4 }}>
+              <span style={{ fontWeight: 500 }}>누락된 내용:</span>
+              <ul style={{ margin: '4px 0 0 16px', padding: 0 }}>
+                {recallResult.missing_elements.map((el, i) => (
+                  <li key={i}>{el}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {recallResult.errors.length > 0 && (
+            <div style={{ fontSize: 12, color: '#b91c1c', marginTop: 4 }}>
+              <span style={{ fontWeight: 500 }}>오류:</span>
+              <ul style={{ margin: '4px 0 0 16px', padding: 0 }}>
+                {recallResult.errors.map((el, i) => (
+                  <li key={i}>{el}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Advance button — only after recall is evaluated */}
+      {!readOnly && recallResult && (
+        <button
+          className="submit-btn"
+          onClick={onNext}
+          disabled={advancing}
+          style={{ marginTop: 16 }}
+        >
+          {advancing ? '처리 중...' : '다음 단계로 →'}
+        </button>
       )}
     </div>
   );

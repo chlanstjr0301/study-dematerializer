@@ -5,10 +5,16 @@ import {
   getStudySession,
   submitStudyDiagnosis,
   advanceStudySessionStep,
+  submitSelfExplanation,
+  submitRecall,
+  completeStudySession,
 } from '../api/client';
 import type {
   CreateStudySessionResponse,
   DiagnoseResponse,
+  SelfExplainResponse,
+  RecallSubmitResponse,
+  CompleteStudySessionResponse,
 } from '../api/types';
 import StudyStepper from '../components/study/StudyStepper';
 import DiagnosisStep from '../components/study/DiagnosisStep';
@@ -43,6 +49,19 @@ export default function StudySession() {
   // Diagnosis input state (for re-display on back nav)
   const [priorKnowledge, setPriorKnowledge] = useState('');
   const [gap, setGap] = useState('');
+
+  // MVP5-4B: Completion loop state
+  // NOTE: selfExplanationResults, recallResult, completionResult are NOT restored from
+  // sessionStorage on refresh. This is a known limitation — the user would need to re-submit
+  // self-explanations and recall after a page refresh. The backend state tracks what was submitted,
+  // so re-calling complete will still work if conditions are met.
+  const [selfExplanationResults, setSelfExplanationResults] = useState<Record<string, SelfExplainResponse>>({});
+  const [recallResult, setRecallResult] = useState<RecallSubmitResponse | null>(null);
+  const [completionResult, setCompletionResult] = useState<CompleteStudySessionResponse | null>(null);
+  const [completing, setCompleting] = useState(false);
+  const [completionError, setCompletionError] = useState<string | null>(null);
+  const [selfExplainSubmitting, setSelfExplainSubmitting] = useState(false);
+  const [recallSubmitting, setRecallSubmitting] = useState(false);
 
   useEffect(() => {
     initSession();
@@ -160,6 +179,74 @@ export default function StudySession() {
     }
   }
 
+  // --- MVP5-4B: Self-Explanation ---
+  async function handleSubmitSelfExplanation(representationType: string, learnerExplanation: string): Promise<SelfExplainResponse> {
+    if (!sessionId) throw new Error('No session');
+    setSelfExplainSubmitting(true);
+    setStepError(null);
+    try {
+      const result = await submitSelfExplanation(sessionId, {
+        representation_type: representationType,
+        learner_explanation: learnerExplanation,
+      });
+      setSelfExplanationResults(prev => ({ ...prev, [representationType]: result }));
+      return result;
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setStepError(`자기 설명 제출 실패: ${msg}`);
+      throw e;
+    } finally {
+      setSelfExplainSubmitting(false);
+    }
+  }
+
+  // --- MVP5-4B: Recall ---
+  async function handleSubmitRecall(learnerResponse: string): Promise<RecallSubmitResponse> {
+    if (!sessionId) throw new Error('No session');
+    setRecallSubmitting(true);
+    setStepError(null);
+    try {
+      const result = await submitRecall(sessionId, {
+        learner_response: learnerResponse,
+      });
+      setRecallResult(result);
+      return result;
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setStepError(`인출 제출 실패: ${msg}`);
+      throw e;
+    } finally {
+      setRecallSubmitting(false);
+    }
+  }
+
+  // --- MVP5-4B: Complete Session ---
+  async function handleCompleteSession() {
+    if (!sessionId || completing || completionResult) return;
+    setCompleting(true);
+    setCompletionError(null);
+    try {
+      const result = await completeStudySession(sessionId);
+      setCompletionResult(result);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      // Extract detail from API error (format: "500 Internal Server Error: {json}")
+      let detail = msg;
+      try {
+        const jsonStart = msg.indexOf('{');
+        if (jsonStart !== -1) {
+          const parsed = JSON.parse(msg.slice(jsonStart));
+          detail = parsed.detail || msg;
+        }
+      } catch {
+        // use raw message
+      }
+      setCompletionError(detail);
+    } finally {
+      setCompleting(false);
+    }
+  }
+
   // --- Navigation ---
   function goBack() {
     if (viewingStep > 1) {
@@ -251,6 +338,9 @@ export default function StudySession() {
             <RepresentationStep
               representations={sessionData.representations}
               onNext={() => handleAdvance('representations')}
+              onSubmitSelfExplanation={handleSubmitSelfExplanation}
+              selfExplanationResults={selfExplanationResults}
+              selfExplainSubmitting={selfExplainSubmitting}
               advancing={advancing}
               readOnly={readOnly}
             />
@@ -266,7 +356,10 @@ export default function StudySession() {
           {displayStep === 4 && (
             <WhiteRecallStep
               conceptId={concept}
+              onSubmitRecall={handleSubmitRecall}
               onNext={() => handleAdvance('recall')}
+              recallResult={recallResult}
+              recallSubmitting={recallSubmitting}
               advancing={advancing}
               readOnly={readOnly}
             />
@@ -276,6 +369,10 @@ export default function StudySession() {
               conceptId={concept}
               canonicalNameKo={sessionData.canonical_name_ko}
               stepsCompleted={stepsCompleted}
+              onComplete={handleCompleteSession}
+              completing={completing}
+              completionResult={completionResult}
+              completionError={completionError}
             />
           )}
         </div>
