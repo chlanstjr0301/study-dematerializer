@@ -1,0 +1,6 @@
+{
+  "accuracy_score": 0.68,
+  "missing_elements": ["counterexample", "proof_schema"],
+  "errors": [],
+  "feedback": "정의와 직관적 설명은 잘 담았지만, 반례와 증명 구조가 빠졌습니다."
+}

@@ -355,3 +355,48 @@ class AdvanceStepResponse(BaseModel):
     current_step: int
     current_step_name: str
     steps_completed: list[str]
+
+
+# ---------------------------------------------------------------------------
+# MVP5-4: Study Session Completion Loop
+# ---------------------------------------------------------------------------
+
+class SelfExplainRequest(BaseModel):
+    representation_type: str
+    learner_explanation: str
+
+
+class SelfExplainResponse(BaseModel):
+    representation_type: str
+    accuracy_score: float
+    missing_elements: list[str]
+    errors: list[str]
+    feedback: str
+
+
+class RecallSubmitRequest(BaseModel):
+    learner_response: str
+
+
+class RecallSubmitResponse(BaseModel):
+    accuracy_score: float
+    missing_elements: list[str]
+    errors: list[str]
+    feedback: str
+
+
+class MasteryUpdateItem(BaseModel):
+    representation_type: str
+    before: str
+    after: str
+    accuracy_score: float
+
+
+class CompleteStudySessionResponse(BaseModel):
+    session_id: str
+    completed: bool
+    mastery_updates: list[MasteryUpdateItem]
+    next_review_date: str
+    study_md_updated: bool
+    study_patch_path: str | None
+    completion_summary: str

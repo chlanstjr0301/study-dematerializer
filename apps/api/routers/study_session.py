@@ -1,5 +1,5 @@
 """
-Router: Study Session — create, get, diagnose, advance.
+Router: Study Session — create, get, diagnose, advance, self-explain, recall, complete.
 """
 from __future__ import annotations
 
@@ -8,13 +8,19 @@ from fastapi import APIRouter, HTTPException
 from apps.api.schemas.api_schemas import (
     AdvanceStepRequest,
     AdvanceStepResponse,
+    CompleteStudySessionResponse,
     CreateStudySessionRequest,
     CreateStudySessionResponse,
     DiagnoseRequest,
     DiagnoseResponse,
+    RecallSubmitRequest,
+    RecallSubmitResponse,
+    SelfExplainRequest,
+    SelfExplainResponse,
     StudySessionStateResponse,
 )
 from apps.api.services import study_session_service as svc
+from apps.api.services.study_session_service import ConflictError, StudyMdUpdateError
 
 router = APIRouter()
 
@@ -82,3 +88,51 @@ def advance_step(session_id: str, req: AdvanceStepRequest):
             raise HTTPException(status_code=409, detail=msg)
         raise HTTPException(status_code=400, detail=msg)
     return AdvanceStepResponse(**result)
+
+
+@router.post("/study-session/{session_id}/self-explain", response_model=SelfExplainResponse)
+def self_explain(session_id: str, req: SelfExplainRequest):
+    try:
+        result = svc.submit_self_explanation(
+            session_id=session_id,
+            representation_type=req.representation_type,
+            learner_explanation=req.learner_explanation,
+        )
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail=f"세션을 찾을 수 없습니다: {session_id}")
+    except ConflictError as e:
+        raise HTTPException(status_code=409, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return SelfExplainResponse(**result)
+
+
+@router.post("/study-session/{session_id}/recall", response_model=RecallSubmitResponse)
+def recall_submit(session_id: str, req: RecallSubmitRequest):
+    try:
+        result = svc.submit_recall(
+            session_id=session_id,
+            learner_response=req.learner_response,
+        )
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail=f"세션을 찾을 수 없습니다: {session_id}")
+    except ConflictError as e:
+        raise HTTPException(status_code=409, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return RecallSubmitResponse(**result)
+
+
+@router.post("/study-session/{session_id}/complete", response_model=CompleteStudySessionResponse)
+def complete_session(session_id: str):
+    try:
+        result = svc.complete_session(session_id=session_id)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail=f"세션을 찾을 수 없습니다: {session_id}")
+    except ConflictError as e:
+        raise HTTPException(status_code=409, detail=str(e))
+    except StudyMdUpdateError as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return CompleteStudySessionResponse(**result)

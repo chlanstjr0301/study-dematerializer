@@ -16,6 +16,8 @@ from apps.api.services.path_utils import validate_slug
 
 STEPS = ["diagnose", "prerequisites", "representations", "misconceptions", "recall", "summary"]
 ADVANCEABLE_STEPS = ["prerequisites", "representations", "misconceptions", "recall"]
+VALID_REPRESENTATION_TYPES = {"formal", "intuitive", "visual", "counterexample", "proof_schema"}
+REQUIRED_SELF_EXPLANATIONS = {"formal", "proof_schema"}
 
 _ALLOWED_SOURCE_EXTS = {".md", ".txt"}
 
@@ -240,9 +242,318 @@ def advance_step(session_id: str, completed_step: str, runs_dir: Path | None = N
     }
 
 
+def submit_self_explanation(
+    session_id: str,
+    representation_type: str,
+    learner_explanation: str,
+    runs_dir: Path | None = None,
+) -> dict:
+    """Evaluate a self-explanation for one representation type."""
+    from gonghaebun.llm.mock import MockLLMClient
+    from gonghaebun.pipeline.self_explanation import evaluate_self_explanation
+
+    _runs_dir = runs_dir or config.RUNS_DIR
+    state = get_study_session(session_id, _runs_dir)
+
+    if state.get("completed"):
+        raise ConflictError("이미 완료된 세션입니다")
+
+    if representation_type not in VALID_REPRESENTATION_TYPES:
+        raise ValueError(f"유효하지 않은 표현 유형입니다: {representation_type}")
+
+    if not learner_explanation.strip():
+        raise ValueError("자기 설명을 입력해 주세요")
+
+    # Load target content from representation_set.json
+    session_dir = _runs_dir / session_id
+    rep_set_path = session_dir / "representation_set.json"
+    rep_set_data: dict = json.loads(rep_set_path.read_text(encoding="utf-8"))
+    representations = _extract_representations(rep_set_data)
+    target_content = representations.get(representation_type, "")
+
+    # Evaluate
+    llm = MockLLMClient()
+    evaluation = evaluate_self_explanation(
+        concept_id=state["concept_id"],
+        representation_type=representation_type,
+        target_content=target_content,
+        learner_response=learner_explanation,
+        llm=llm,
+    )
+
+    # Store in state
+    if state["self_explanations"] is None:
+        state["self_explanations"] = {}
+    state["self_explanations"][representation_type] = {
+        "learner_explanation": learner_explanation,
+        "accuracy_score": evaluation.accuracy_score,
+        "missing_elements": evaluation.missing_elements,
+        "errors": evaluation.errors,
+        "feedback": evaluation.feedback,
+    }
+    state["updated_at"] = datetime.now(timezone.utc).isoformat()
+    _write_state(session_dir, state)
+
+    return {
+        "representation_type": representation_type,
+        "accuracy_score": evaluation.accuracy_score,
+        "missing_elements": evaluation.missing_elements,
+        "errors": evaluation.errors,
+        "feedback": evaluation.feedback,
+    }
+
+
+def submit_recall(
+    session_id: str,
+    learner_response: str,
+    runs_dir: Path | None = None,
+) -> dict:
+    """Evaluate White Recall submission."""
+    from gonghaebun.llm.mock import MockLLMClient
+    from gonghaebun.models.session_models import RecallEvaluation
+    from gonghaebun.prompts import load_prompt
+
+    _runs_dir = runs_dir or config.RUNS_DIR
+    state = get_study_session(session_id, _runs_dir)
+
+    if state.get("completed"):
+        raise ConflictError("이미 완료된 세션입니다")
+
+    if not learner_response.strip():
+        raise ValueError("인출 응답을 입력해 주세요")
+
+    # Load representation_set for combined target
+    session_dir = _runs_dir / session_id
+    rep_set_path = session_dir / "representation_set.json"
+    rep_set_data: dict = json.loads(rep_set_path.read_text(encoding="utf-8"))
+    representations = _extract_representations(rep_set_data)
+    combined_target = "\n\n".join(
+        f"[{k}] {v}" for k, v in representations.items()
+    )
+
+    # Evaluate using recall_eval fixture
+    llm = MockLLMClient()
+    concept_id = state["concept_id"]
+    system = load_prompt("global_system")
+    stage5_prompt = load_prompt("stage5_self_explanation_evaluator")
+    user = (
+        f"{stage5_prompt}\n\n"
+        f"## Concept\n{concept_id}\n\n"
+        f"## Representation Type\nrecall_overall\n\n"
+        f"## Target Content\n{combined_target}\n\n"
+        f"## Learner Explanation\n{learner_response}\n\n"
+        f"__fixture__:{concept_id}/recall_eval"
+    )
+    data = llm.complete_json(system, user)
+    evaluation = RecallEvaluation(
+        accuracy_score=float(data.get("accuracy_score", 0.0)),
+        missing_elements=data.get("missing_elements", []),
+        errors=data.get("errors", []),
+        feedback=data.get("feedback", ""),
+    )
+
+    # Store in state
+    state["recall_evaluation"] = {
+        "learner_response": learner_response,
+        "accuracy_score": evaluation.accuracy_score,
+        "missing_elements": evaluation.missing_elements,
+        "errors": evaluation.errors,
+        "feedback": evaluation.feedback,
+    }
+    state["recall_completed"] = True
+    state["updated_at"] = datetime.now(timezone.utc).isoformat()
+    _write_state(session_dir, state)
+
+    return {
+        "accuracy_score": evaluation.accuracy_score,
+        "missing_elements": evaluation.missing_elements,
+        "errors": evaluation.errors,
+        "feedback": evaluation.feedback,
+    }
+
+
+def complete_session(
+    session_id: str,
+    runs_dir: Path | None = None,
+    study_md_path: Path | None = None,
+) -> dict:
+    """Mark session complete, compute mastery, update STUDY.md."""
+    from gonghaebun.models.session_models import (
+        MasteryUpdate,
+        RecallAttempt,
+        RecallEvaluation,
+        StudySession,
+    )
+    from gonghaebun.study_md.writer import (
+        apply_patch,
+        compute_mastery_state,
+        compute_next_review_date,
+        generate_patch,
+    )
+
+    _runs_dir = runs_dir or config.RUNS_DIR
+    _study_md = study_md_path or config.STUDY_MD
+    state = get_study_session(session_id, _runs_dir)
+    session_dir = _runs_dir / session_id
+
+    # Idempotent: already completed → return existing result
+    if state.get("completed"):
+        return {
+            "session_id": session_id,
+            "completed": True,
+            "mastery_updates": state.get("mastery_updates", []),
+            "next_review_date": state.get("next_review_date", ""),
+            "study_md_updated": state.get("study_md_updated", False),
+            "study_patch_path": state.get("study_patch_path"),
+            "completion_summary": _build_completion_summary(state),
+        }
+
+    # Completion conditions
+    if not state.get("recall_completed"):
+        raise ValueError("인출 연습을 먼저 완료해야 합니다")
+
+    self_exps = state.get("self_explanations") or {}
+    submitted_types = set(self_exps.keys())
+    missing_required = REQUIRED_SELF_EXPLANATIONS - submitted_types
+    if missing_required:
+        raise ValueError("최소 formal, proof_schema 자기 설명을 완료해야 합니다")
+
+    # Compute mastery updates
+    concept_id = state["concept_id"]
+    mastery_updates: list[dict] = []
+    recall_attempts: list[RecallAttempt] = []
+    mastery_update_objs: list[MasteryUpdate] = []
+
+    for rep_type, exp_data in self_exps.items():
+        score = exp_data["accuracy_score"]
+        new_mastery = compute_mastery_state(score)
+        mastery_updates.append({
+            "representation_type": rep_type,
+            "before": "unknown",
+            "after": new_mastery,
+            "accuracy_score": score,
+        })
+        # Build RecallAttempt for apply_patch
+        recall_attempts.append(RecallAttempt(
+            session_id=session_id,
+            concept_id=concept_id,
+            representation_type=rep_type,
+            learner_response=exp_data.get("learner_explanation", ""),
+            evaluation=RecallEvaluation(
+                accuracy_score=score,
+                missing_elements=exp_data.get("missing_elements", []),
+                errors=exp_data.get("errors", []),
+                feedback=exp_data.get("feedback", ""),
+            ),
+            attempted_at=state.get("updated_at", ""),
+        ))
+
+    # Compute overall mastery (weakest link including reps without self-explanation)
+    all_masteries = []
+    for rep_type in VALID_REPRESENTATION_TYPES:
+        if rep_type in self_exps:
+            all_masteries.append(compute_mastery_state(self_exps[rep_type]["accuracy_score"]))
+        else:
+            all_masteries.append("unknown")
+
+    if "unknown" in all_masteries:
+        overall = "unknown"
+    elif "partial" in all_masteries:
+        overall = "partial"
+    else:
+        overall = "solid"
+
+    next_review = compute_next_review_date(overall)
+
+    # Build MasteryUpdate objects for StudySession
+    for mu in mastery_updates:
+        mastery_update_objs.append(MasteryUpdate(
+            concept_id=concept_id,
+            representation_type=mu["representation_type"],
+            before=mu["before"],
+            after=mu["after"],
+            next_review_date=next_review,
+        ))
+
+    # Build minimal StudySession for apply_patch
+    now = datetime.now(timezone.utc).isoformat()
+    study_session_obj = StudySession(
+        session_id=session_id,
+        session_type="new_concept",
+        concept_ids=[concept_id],
+        started_at=state.get("created_at", now),
+        ended_at=now,
+        llm_backend="mock",
+        source_path="",
+        source_hash="",
+        grounding_mode="local_private_source",
+        mastery_updates=mastery_update_objs,
+        recall_attempts=recall_attempts,
+    )
+
+    # Write STUDY.patch.md (audit trail — always written, even if apply fails)
+    patch_content = generate_patch(study_session_obj)
+    patch_path = session_dir / "STUDY.patch.md"
+    patch_path.write_text(patch_content, encoding="utf-8")
+
+    # Save intermediate state (mastery computed but not yet completed)
+    state["mastery_updates"] = mastery_updates
+    state["next_review_date"] = next_review
+    state["study_patch_path"] = f"runs/{session_id}/STUDY.patch.md"
+    state["updated_at"] = now
+    _write_state(session_dir, state)
+
+    # Apply to STUDY.md — failure prevents completion
+    try:
+        apply_patch(_study_md, study_session_obj)
+    except Exception as e:
+        raise StudyMdUpdateError(f"STUDY.md 업데이트에 실패했습니다: {e}") from e
+
+    # Only mark completed after successful STUDY.md update
+    state["completed"] = True
+    state["completed_at"] = now
+    state["study_md_updated"] = True
+    state["updated_at"] = now
+    _write_state(session_dir, state)
+
+    return {
+        "session_id": session_id,
+        "completed": True,
+        "mastery_updates": mastery_updates,
+        "next_review_date": next_review,
+        "study_md_updated": True,
+        "study_patch_path": state["study_patch_path"],
+        "completion_summary": _build_completion_summary(state),
+    }
+
+
+class ConflictError(Exception):
+    """Raised when an operation conflicts with current session state."""
+    pass
+
+
+class StudyMdUpdateError(Exception):
+    """Raised when STUDY.md update fails during session completion."""
+    pass
+
+
 # ---------------------------------------------------------------------------
 # Private helpers
 # ---------------------------------------------------------------------------
+
+
+def _build_completion_summary(state: dict) -> str:
+    """Build Korean completion summary text."""
+    concept_name = state.get("canonical_name_ko", state.get("concept_id", ""))
+    mastery_updates = state.get("mastery_updates", [])
+    next_review = state.get("next_review_date", "미정")
+
+    updated_reps = len(mastery_updates)
+    summary = f"{concept_name} 학습 세션이 완료되었습니다. "
+    if updated_reps > 0:
+        summary += f"{updated_reps}개 표현의 숙련도가 업데이트되었습니다. "
+    summary += f"다음 복습일: {next_review}"
+    return summary
 
 
 def _resolve_source(
