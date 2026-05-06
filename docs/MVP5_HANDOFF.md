@@ -70,8 +70,12 @@ cp tests/data/sample_source.md data/gonghaebun/default/sources/
 
 ## 5. 수동 검증 체크리스트
 
-> **Status: Manual verification pending**
-> 아래 절차는 자동 테스트와 별도로 수동 확인이 필요하다.
+> **API-level smoke test: PASSED (2026-05-06)**
+> **Artifact consistency check: PASSED (2026-05-06)**
+> **Browser manual smoke test: PENDING**
+>
+> API E2E 및 아티팩트 정합성 검증은 완료되었으나,
+> 브라우저에서 http://localhost:5173 → /study/compactness UI 완주는 미수행.
 
 | # | 동작 | 예상 결과 |
 |---|------|----------|
@@ -100,6 +104,57 @@ cp tests/data/sample_source.md data/gonghaebun/default/sources/
 | E2 | 소스 없이 세션 생성 | "소스 파일을 먼저 업로드하세요" |
 | E3 | recall 없이 complete | 400 에러 |
 | E4 | self-explain 없이 complete | 400 에러 |
+
+### API-level Smoke Test 결과 (2026-05-06)
+
+TestClient를 사용해 전체 E2E 흐름을 검증함:
+
+| Step | Endpoint | Status | 결과 |
+|------|----------|--------|------|
+| A | POST /api/study-session | 201 | session created, 5 reps, 5 prereqs, 3 misconceptions |
+| C | POST .../diagnose | 200 | mastery=partial |
+| D | POST .../self-explain (formal) | 200 | accuracy=0.6 |
+| E | POST .../self-explain (proof_schema) | 200 | accuracy=0.6 |
+| F | POST .../advance (prerequisites) | 200 | step=3 |
+| G | POST .../advance (representations) | 200 | step=4 |
+| H | POST .../advance (misconceptions) | 200 | step=5 |
+| I | POST .../recall | 200 | accuracy=0.68 |
+| J | POST .../advance (recall) | 200 | step=6 |
+| K | POST .../complete | 200 | completed=true, study_md_updated=true |
+
+### Artifact Consistency 결과 (2026-05-06)
+
+| Check | Result |
+|-------|--------|
+| study_session_state.json exists | OK |
+| completed=true | OK |
+| recall_completed=true | OK |
+| completed_at exists | OK (2026-05-06T05:13:33) |
+| study_md_updated=true | OK |
+| next_review_date exists | OK (2026-05-07) |
+| self_explanations has formal, proof_schema | OK |
+| mastery_updates length >= 2 | OK (2 items) |
+| STUDY.patch.md exists | OK |
+| STUDY.md exists | OK |
+| STUDY.md contains compactness | OK |
+| questions.accepted.json exists | OK (4 questions) |
+
+### Browser Manual Smoke Test
+
+Browser manual smoke test remains pending.
+API-level E2E and artifact checks passed.
+
+서버를 실행하고 브라우저에서 확인하려면:
+
+```bash
+# Backend
+python -m uvicorn apps.api.main:app --reload --port 8000
+
+# Frontend (별도 터미널)
+cd apps/web && npm run dev
+
+# Browser: http://localhost:5173 → "옹골성" 입력 → 6단계 완주
+```
 
 ---
 
@@ -192,3 +247,37 @@ npm run build                → clean (0 errors)
 
 자동 테스트는 모든 API 경로, 에러 케이스, apply_patch 실패 시나리오를 커버한다.
 수동 smoke test는 별도 수행 필요.
+
+---
+
+## 11. Troubleshooting
+
+### Windows cp949 인코딩 오류
+
+한글 출력이 깨지거나 `UnicodeEncodeError: 'cp949' codec can't encode character` 오류가 발생하면:
+
+```bash
+PYTHONIOENCODING=utf-8 python <script.py>
+```
+
+또는 스크립트 상단에:
+
+```python
+import sys
+sys.stdout.reconfigure(encoding='utf-8')
+```
+
+### 소스 파일 없음 오류
+
+`422: 소스 파일을 찾을 수 없습니다` 오류 시:
+
+```bash
+mkdir -p data/gonghaebun/default/sources
+cp tests/data/sample_source.md data/gonghaebun/default/sources/
+```
+
+### sessionStorage 복구 한계
+
+페이지 새로고침 시 selfExplanationResults, recallResult가 복원되지 않는다.
+백엔드 상태(study_session_state.json)는 유지되므로, complete 호출은 가능하지만
+UI에서 이전 평가 결과가 보이지 않을 수 있다.
