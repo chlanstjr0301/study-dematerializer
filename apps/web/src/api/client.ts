@@ -26,6 +26,13 @@ import type {
   StudyValidationReport,
   AnalyzeRequest,
   AnalyzeResponse,
+  CreateStudySessionRequest,
+  CreateStudySessionResponse,
+  DiagnoseRequest,
+  DiagnoseResponse,
+  AdvanceStepRequest,
+  AdvanceStepResponse,
+  StudySessionStateResponse,
 } from './types';
 
 const BASE = '/api';
@@ -158,3 +165,19 @@ export const getValidation = (): Promise<StudyValidationReport> =>
 
 export const analyzeMessage = (req: AnalyzeRequest): Promise<AnalyzeResponse> =>
   post('/compiler/analyze', req);
+
+// ---------------------------------------------------------------------------
+// MVP5-3: Study Session
+// ---------------------------------------------------------------------------
+
+export const createStudySession = (req: CreateStudySessionRequest): Promise<CreateStudySessionResponse> =>
+  post('/study-session', req);
+
+export const getStudySession = (sessionId: string): Promise<StudySessionStateResponse> =>
+  get(`/study-session/${sessionId}`);
+
+export const submitStudyDiagnosis = (sessionId: string, req: DiagnoseRequest): Promise<DiagnoseResponse> =>
+  post(`/study-session/${sessionId}/diagnose`, req);
+
+export const advanceStudySessionStep = (sessionId: string, req: AdvanceStepRequest): Promise<AdvanceStepResponse> =>
+  post(`/study-session/${sessionId}/advance`, req);

@@ -293,3 +293,81 @@ export interface AnalyzeResponse {
   recommended_actions: RecommendedAction[];
   representations: Record<string, string> | null;
 }
+
+// ---------------------------------------------------------------------------
+// MVP5-3: Study Session
+// ---------------------------------------------------------------------------
+
+export interface StudyPrerequisiteInfo {
+  concept_id: string;
+  name_ko: string;
+  mastery: string;  // "unknown" | "partial" | "solid"
+}
+
+export interface MisconceptionInfo {
+  id: string;
+  claim: string;
+  is_correct: boolean;
+}
+
+export interface CreateStudySessionRequest {
+  concept_id: string;
+  source_relative_path?: string | null;
+}
+
+export interface CreateStudySessionResponse {
+  session_id: string;
+  concept_id: string;
+  canonical_name_ko: string;
+  current_step: number;
+  steps: string[];
+  representations: Record<string, string>;
+  prerequisites: StudyPrerequisiteInfo[];
+  misconceptions: MisconceptionInfo[];
+}
+
+export interface DiagnoseRequest {
+  prior_knowledge: string;
+  gap_description: string;
+}
+
+export interface DiagnoseResponse {
+  initial_mastery_estimate: string;
+  identified_gaps: string[];
+  recommendation: string;
+}
+
+export interface AdvanceStepRequest {
+  completed_step: string;
+}
+
+export interface AdvanceStepResponse {
+  current_step: number;
+  current_step_name: string;
+  steps_completed: string[];
+}
+
+export interface DiagnosisData {
+  prior_knowledge: string;
+  gap_description: string;
+  initial_mastery_estimate: string;
+  identified_gaps: string[];
+  recommendation: string;
+}
+
+export interface StudySessionStateResponse {
+  session_id: string;
+  concept_id: string;
+  canonical_name_ko: string;
+  current_step: number;
+  steps: string[];
+  steps_completed: string[];
+  diagnosis: DiagnosisData | null;
+  self_explanations: Record<string, unknown> | null;
+  recall_completed: boolean;
+  recall_session_id: string | null;
+  completed: boolean;
+  completed_at: string | null;
+  created_at: string;
+  updated_at: string;
+}

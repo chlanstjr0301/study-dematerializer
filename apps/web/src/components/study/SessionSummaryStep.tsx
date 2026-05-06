@@ -2,9 +2,13 @@ import { Link } from 'react-router-dom';
 
 interface SessionSummaryStepProps {
   conceptId: string;
+  canonicalNameKo: string;
+  stepsCompleted: string[];
 }
 
-export default function SessionSummaryStep({ conceptId }: SessionSummaryStepProps) {
+const TOTAL_STEPS = 6;
+
+export default function SessionSummaryStep({ conceptId, canonicalNameKo, stepsCompleted }: SessionSummaryStepProps) {
   return (
     <div>
       <h2 style={{ marginBottom: 16 }}>세션 정리</h2>
@@ -17,7 +21,10 @@ export default function SessionSummaryStep({ conceptId }: SessionSummaryStepProp
           학습 세션을 완료했습니다!
         </p>
         <p style={{ fontSize: 14, color: '#166534' }}>
-          오늘 다룬 내용: <strong>{conceptId}</strong>
+          오늘 다룬 내용: <strong>{canonicalNameKo}</strong> ({conceptId})
+        </p>
+        <p style={{ fontSize: 13, color: '#166534', marginTop: 4 }}>
+          완료한 단계: {stepsCompleted.length}/{TOTAL_STEPS}
         </p>
       </div>
 
@@ -45,7 +52,7 @@ export default function SessionSummaryStep({ conceptId }: SessionSummaryStepProp
           </tbody>
         </table>
         <p style={{ fontSize: 12, color: '#94a3b8', marginTop: 8 }}>
-          * 숙련도 업데이트는 백엔드 연결 후 자동으로 반영됩니다.
+          * 숙련도 업데이트는 다음 버전에서 자동으로 반영됩니다.
         </p>
       </div>
 

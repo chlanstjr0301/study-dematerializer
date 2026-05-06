@@ -1,71 +1,43 @@
 import { useState } from 'react';
+import type { MisconceptionInfo } from '../../api/types';
 
 interface MisconceptionStepProps {
-  conceptId: string;
+  misconceptions: MisconceptionInfo[];
   onNext: () => void;
+  advancing?: boolean;
+  readOnly?: boolean;
 }
 
-interface MisconceptionItem {
-  statement: string;
-  isTrue: boolean;
-  explanation: string;
-}
-
-const SAMPLE_MISCONCEPTIONS: Record<string, MisconceptionItem[]> = {
-  compactness: [
-    {
-      statement: '콤팩트 집합은 항상 유계이다.',
-      isTrue: true,
-      explanation: '맞습니다. 콤팩트 집합은 유계이고 폐집합입니다 (유클리드 공간에서).',
-    },
-    {
-      statement: '유계이고 폐인 집합은 항상 콤팩트하다.',
-      isTrue: false,
-      explanation: '유클리드 공간에서는 맞지만 (하이네-보렐), 일반 거리 공간에서는 틀립니다.',
-    },
-    {
-      statement: '콤팩트 집합의 부분집합은 항상 콤팩트하다.',
-      isTrue: false,
-      explanation: '폐부분집합만 콤팩트합니다. 열린 부분집합은 콤팩트하지 않을 수 있습니다.',
-    },
-  ],
-  connectedness: [
-    {
-      statement: '연결 집합은 항상 경로 연결이다.',
-      isTrue: false,
-      explanation: '연결이 경로 연결보다 약한 조건입니다. 반례: 위상수학자의 사인 곡선.',
-    },
-    {
-      statement: '연속 함수의 상은 연결 집합을 보존한다.',
-      isTrue: true,
-      explanation: '맞습니다. 연속 함수는 연결성을 보존합니다.',
-    },
-  ],
-  uniform_continuity: [
-    {
-      statement: '균등 연속이면 연속이다.',
-      isTrue: true,
-      explanation: '맞습니다. 균등 연속은 연속보다 강한 조건입니다.',
-    },
-    {
-      statement: '연속 함수는 항상 균등 연속이다.',
-      isTrue: false,
-      explanation: '반례: f(x) = x²은 R에서 연속이지만 균등 연속이 아닙니다.',
-    },
-  ],
-};
-
-export default function MisconceptionStep({ conceptId, onNext }: MisconceptionStepProps) {
-  const misconceptions = SAMPLE_MISCONCEPTIONS[conceptId] ?? SAMPLE_MISCONCEPTIONS['compactness']!;
+export default function MisconceptionStep({
+  misconceptions,
+  onNext,
+  advancing = false,
+  readOnly = false,
+}: MisconceptionStepProps) {
   const [answers, setAnswers] = useState<Record<number, boolean | null>>({});
   const [revealed, setRevealed] = useState<Record<number, boolean>>({});
 
   function handleAnswer(index: number, answer: boolean) {
+    if (readOnly) return;
     setAnswers(prev => ({ ...prev, [index]: answer }));
     setRevealed(prev => ({ ...prev, [index]: true }));
   }
 
-  const allAnswered = misconceptions.every((_, i) => revealed[i]);
+  const allAnswered = misconceptions.length > 0 && misconceptions.every((_, i) => revealed[i]);
+
+  if (misconceptions.length === 0) {
+    return (
+      <div>
+        <h2 style={{ marginBottom: 16 }}>주의할 오개념</h2>
+        <p style={{ color: '#94a3b8' }}>오개념 데이터가 없습니다.</p>
+        {!readOnly && (
+          <button className="submit-btn" onClick={onNext} disabled={advancing}>
+            {advancing ? '처리 중...' : '다음 단계 →'}
+          </button>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -77,18 +49,18 @@ export default function MisconceptionStep({ conceptId, onNext }: MisconceptionSt
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginBottom: 20 }}>
         {misconceptions.map((item, i) => (
           <div
-            key={i}
+            key={item.id}
             style={{
-              border: `1px solid ${revealed[i] ? (answers[i] === item.isTrue ? '#bbf7d0' : '#fecaca') : '#e5e7eb'}`,
+              border: `1px solid ${revealed[i] ? (answers[i] === item.is_correct ? '#bbf7d0' : '#fecaca') : '#e5e7eb'}`,
               borderRadius: 8, padding: '14px 18px',
-              background: revealed[i] ? (answers[i] === item.isTrue ? '#f0fdf4' : '#fef2f2') : '#fff',
+              background: revealed[i] ? (answers[i] === item.is_correct ? '#f0fdf4' : '#fef2f2') : '#fff',
             }}
           >
             <p style={{ fontWeight: 500, marginBottom: 10, fontSize: 14 }}>
-              "{item.statement}"
+              &ldquo;{item.claim}&rdquo;
             </p>
 
-            {!revealed[i] ? (
+            {!revealed[i] && !readOnly ? (
               <div style={{ display: 'flex', gap: 10 }}>
                 <button
                   className="submit-btn"
@@ -105,30 +77,29 @@ export default function MisconceptionStep({ conceptId, onNext }: MisconceptionSt
                   거짓
                 </button>
               </div>
-            ) : (
+            ) : revealed[i] ? (
               <div style={{ fontSize: 13, color: '#374151', marginTop: 8 }}>
                 <span style={{
                   fontWeight: 600,
-                  color: answers[i] === item.isTrue ? '#15803d' : '#b91c1c',
+                  color: answers[i] === item.is_correct ? '#15803d' : '#b91c1c',
                 }}>
-                  {answers[i] === item.isTrue ? '정답!' : '오답'}
+                  {answers[i] === item.is_correct ? '정답!' : '오답'}
                 </span>
                 <span style={{ color: '#888', marginLeft: 8 }}>
-                  (정답: {item.isTrue ? '참' : '거짓'})
+                  (정답: {item.is_correct ? '참' : '거짓'})
                 </span>
-                <p style={{ marginTop: 6, color: '#555' }}>{item.explanation}</p>
               </div>
-            )}
+            ) : null}
           </div>
         ))}
       </div>
 
-      {allAnswered && (
-        <button className="submit-btn" onClick={onNext}>
-          다음 단계 →
+      {!readOnly && allAnswered && (
+        <button className="submit-btn" onClick={onNext} disabled={advancing}>
+          {advancing ? '처리 중...' : '다음 단계 →'}
         </button>
       )}
-      {!allAnswered && (
+      {!allAnswered && !readOnly && (
         <p style={{ fontSize: 13, color: '#94a3b8' }}>
           모든 문항에 답하면 다음 단계로 진행할 수 있습니다.
         </p>
