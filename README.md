@@ -60,6 +60,22 @@ cp tests/data/sample_source.md data/gonghaebun/default/sources/
 
 자세한 사용법: [docs/MVP5_HANDOFF.md](docs/MVP5_HANDOFF.md)
 
+## Real LLM Mode
+
+기본값은 Mock 모드입니다 (`GONGHAEBUN_LLM_DISABLED=1`). 실제 OpenAI API를 사용하려면:
+
+```bash
+# .env 설정
+GONGHAEBUN_LLM_DISABLED=0
+GONGHAEBUN_LLM_PROVIDER=openai
+GONGHAEBUN_LLM_MODEL=gpt-5.5
+OPENAI_API_KEY=<your_openai_api_key>
+```
+
+> **비용 경고**: 학습 세션 1회당 약 10회의 LLM API 호출이 발생합니다.
+
+자세한 설정 방법: [docs/MVP6_REAL_LLM_SMOKE.md](docs/MVP6_REAL_LLM_SMOKE.md)
+
 ## Project status
 
 - MVP1–MVP4: Source → Bank → Review → Recall → Mastery pipeline complete
