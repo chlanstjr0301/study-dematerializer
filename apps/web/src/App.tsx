@@ -9,6 +9,7 @@ import RecallSession from './pages/RecallSession';
 import SourceUpload from './pages/SourceUpload';
 import BankReview from './pages/BankReview';
 import ConceptCompiler from './pages/ConceptCompiler';
+import StudySession from './pages/StudySession';
 
 export default function App() {
   return (
@@ -24,6 +25,7 @@ export default function App() {
           <Route path="/sources" element={<SourceUpload />} />
           <Route path="/review/:conceptId" element={<BankReview />} />
           <Route path="/concepts" element={<ConceptCompiler />} />
+          <Route path="/study/:conceptId" element={<StudySession />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Layout>

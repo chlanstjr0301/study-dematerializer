@@ -230,6 +230,20 @@ function AnalysisCard({
         </div>
       )}
 
+      {/* 공부 시작 */}
+      {analysis.concept_id && (
+        <Link
+          className="analysis-action-link"
+          to={`/study/${analysis.concept_id}`}
+          style={{ background: '#15803d' }}
+        >
+          공부 시작
+          <span className="analysis-action-desc">
+            {analysis.canonical_name_ko}의 학습 세션을 시작합니다.
+          </span>
+        </Link>
+      )}
+
       {/* 인출 연습 시작 */}
       {analysis.recommended_actions
         .filter(a => a.route !== null)

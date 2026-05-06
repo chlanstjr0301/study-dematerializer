@@ -11,6 +11,17 @@ import type {
 } from '../api/types';
 import StudyMdViewer from '../components/StudyMdViewer';
 
+const MASTERY_LABEL: Record<string, string> = {
+  solid: '완전',
+  partial: '부분',
+  unknown: '미확인',
+};
+
+const DUE_LABEL: Record<string, string> = {
+  overdue: '초과',
+  due: '예정',
+};
+
 export default function Dashboard() {
   const [health, setHealth] = useState<HealthResponse | null>(null);
   const [healthError, setHealthError] = useState<string | null>(null);
@@ -58,8 +69,8 @@ export default function Dashboard() {
     if (validation && !validation.valid) {
       return {
         type: 'fix' as const,
-        label: `Fix: STUDY.md has ${validation.error_count} error(s)`,
-        note: 'Due and weak rep data may be unreliable when canonical state is invalid.',
+        label: `수정 필요: STUDY.md에 ${validation.error_count}개 오류`,
+        note: '표준 상태가 유효하지 않으면 복습/취약 데이터가 부정확할 수 있습니다.',
       };
     }
     if (due && due.length > 0) {
@@ -67,22 +78,22 @@ export default function Dashboard() {
       const href = first.suggested_mode === 'weak_only' && first.target_representations.length > 0
         ? `/recall?concept=${first.concept_id}&target_reps=${first.target_representations.join(',')}`
         : `/recall?concept=${first.concept_id}`;
-      return { type: 'due' as const, label: `Resume: ${due.length} concept(s) due for review`, href };
+      return { type: 'due' as const, label: `복습: ${due.length}개 개념 복습 예정`, href };
     }
     if (weak && weak.length > 0) {
       const first = weak[0];
       const href = `/recall?concept=${first.concept_id}&rep_type=${first.rep_type}`;
-      return { type: 'weak' as const, label: `Strengthen: ${weak.length} weak representation(s)`, href };
+      return { type: 'weak' as const, label: `강화: ${weak.length}개 취약 표현`, href };
     }
     if (due !== null && weak !== null) {
-      return { type: 'done' as const, label: 'All representations current. Compile next concept →', href: '/concepts' };
+      return { type: 'done' as const, label: '모든 표현 최신. 다음 개념 컴파일 →', href: '/concepts' };
     }
     return null;  // still loading
   })();
 
   return (
     <div>
-      <h1>Dashboard</h1>
+      <h1>대시보드</h1>
 
       {/* Primary CTA */}
       {ctaContent && (
@@ -111,29 +122,29 @@ export default function Dashboard() {
 
       {/* API health */}
       <div className="section">
-        <h2>API Status</h2>
+        <h2>API 상태</h2>
         <div className="card">
           {healthError ? (
-            <span className="error-text">Cannot reach API: {healthError}</span>
+            <span className="error-text">API 연결 불가: {healthError}</span>
           ) : health ? (
             <span className="badge badge-ok">API: {health.status}</span>
           ) : (
-            <span className="loading">Checking…</span>
+            <span className="loading">확인 중…</span>
           )}
         </div>
       </div>
 
       {/* STUDY.md validation status */}
       <div className="section">
-        <h2>STUDY.md State</h2>
+        <h2>STUDY.md 상태</h2>
         <div className="card">
           {validation === null ? (
-            <span className="loading">Checking…</span>
+            <span className="loading">확인 중…</span>
           ) : validation.valid ? (
-            <span className="badge badge-ok">✓ Valid</span>
+            <span className="badge badge-ok">✓ 정상</span>
           ) : (
             <span className="badge badge-overdue">
-              ✗ {validation.error_count} error(s){validation.warning_count > 0 ? `, ${validation.warning_count} warning(s)` : ''}
+              ✗ {validation.error_count}개 오류{validation.warning_count > 0 ? `, ${validation.warning_count}개 경고` : ''}
             </span>
           )}
         </div>
@@ -141,23 +152,23 @@ export default function Dashboard() {
 
       {/* Due today */}
       <div className="section">
-        <h2>Review Due</h2>
+        <h2>복습 예정</h2>
         <div className="card">
           {dueError ? (
             <p className="error-text">{dueError}</p>
           ) : due === null ? (
-            <p className="loading">Loading…</p>
+            <p className="loading">불러오는 중…</p>
           ) : due.length === 0 ? (
-            <p className="empty-state">Nothing due for review.</p>
+            <p className="empty-state">복습 예정인 개념이 없습니다.</p>
           ) : (
             <table className="table-simple">
               <thead>
                 <tr>
-                  <th>Concept</th>
-                  <th>Mastery</th>
-                  <th>Weak Reps</th>
-                  <th>Next Review</th>
-                  <th>Status</th>
+                  <th>개념</th>
+                  <th>숙련도</th>
+                  <th>취약</th>
+                  <th>다음 복습</th>
+                  <th>상태</th>
                   <th></th>
                 </tr>
               </thead>
@@ -166,7 +177,7 @@ export default function Dashboard() {
                   const href = item.suggested_mode === 'weak_only' && item.target_representations.length > 0
                     ? `/recall?concept=${item.concept_id}&target_reps=${item.target_representations.join(',')}`
                     : `/recall?concept=${item.concept_id}`;
-                  const label = item.suggested_mode === 'weak_only' ? 'Review Weak →' : 'Full Review →';
+                  const label = item.suggested_mode === 'weak_only' ? '취약 복습 →' : '전체 복습 →';
                   const masteryClass =
                     item.overall_mastery === 'solid' ? 'badge badge-ok' :
                     item.overall_mastery === 'partial' ? 'badge badge-partial' :
@@ -174,12 +185,12 @@ export default function Dashboard() {
                   return (
                     <tr key={item.concept_id}>
                       <td>{item.concept_id}</td>
-                      <td><span className={masteryClass}>{item.overall_mastery}</span></td>
+                      <td><span className={masteryClass}>{MASTERY_LABEL[item.overall_mastery] ?? item.overall_mastery}</span></td>
                       <td>{item.weak_rep_count > 0 ? item.weak_rep_count : '—'}</td>
                       <td>{item.next_review ?? '—'}</td>
                       <td>
                         <span className={item.overdue ? 'badge badge-overdue' : 'badge'}>
-                          {item.overdue ? 'overdue' : 'due'}
+                          {item.overdue ? DUE_LABEL['overdue'] : DUE_LABEL['due']}
                         </span>
                       </td>
                       <td>
@@ -197,15 +208,15 @@ export default function Dashboard() {
       {/* Weak Representations */}
       {weak !== null && weak.length > 0 && (
         <div className="section">
-          <h2>Weak Representations</h2>
+          <h2>취약 표현</h2>
           <div className="card">
             <table className="table-simple">
               <thead>
                 <tr>
-                  <th>Concept</th>
-                  <th>Type</th>
-                  <th>Mastery</th>
-                  <th>Last reviewed</th>
+                  <th>개념</th>
+                  <th>유형</th>
+                  <th>숙련도</th>
+                  <th>최근 복습</th>
                   <th></th>
                 </tr>
               </thead>
@@ -216,7 +227,7 @@ export default function Dashboard() {
                     <td><code>{item.rep_type}</code></td>
                     <td>
                       <span className={item.mastery === 'unknown' ? 'badge badge-overdue' : 'badge badge-partial'}>
-                        {item.mastery}
+                        {MASTERY_LABEL[item.mastery] ?? item.mastery}
                       </span>
                     </td>
                     <td>{item.last_reviewed ?? '—'}</td>
@@ -225,7 +236,7 @@ export default function Dashboard() {
                         to={`/recall?concept=${item.concept_id}&rep_type=${item.rep_type}`}
                         className="session-link"
                       >
-                        Strengthen →
+                        강화 →
                       </Link>
                     </td>
                   </tr>
@@ -238,18 +249,18 @@ export default function Dashboard() {
 
       {/* Recent Sessions */}
       <div className="section">
-        <h2>Recent Sessions</h2>
+        <h2>최근 세션</h2>
         <div className="card">
           {recentSessions === null ? (
-            <p className="loading">Loading…</p>
+            <p className="loading">불러오는 중…</p>
           ) : recentSessions.length === 0 ? (
-            <p className="empty-state">No sessions yet.</p>
+            <p className="empty-state">아직 세션이 없습니다.</p>
           ) : (
             <table className="table-simple">
               <thead>
                 <tr>
-                  <th>Concept</th>
-                  <th>Started</th>
+                  <th>개념</th>
+                  <th>시작일</th>
                   <th></th>
                 </tr>
               </thead>
@@ -259,7 +270,7 @@ export default function Dashboard() {
                     <td>{s.concept_id}</td>
                     <td style={{ fontSize: 13, color: '#555' }}>{s.started_at.slice(0, 10)}</td>
                     <td>
-                      <Link to={`/sessions/${s.session_id}`} className="session-link">View →</Link>
+                      <Link to={`/sessions/${s.session_id}`} className="session-link">보기 →</Link>
                     </td>
                   </tr>
                 ))}
@@ -273,13 +284,13 @@ export default function Dashboard() {
       <div className="section">
         <details>
           <summary style={{ cursor: 'pointer', fontWeight: 600, fontSize: 16, marginBottom: 4 }}>
-            STUDY.md (raw)
+            STUDY.md (원본)
           </summary>
           <div className="card" style={{ marginTop: 8 }}>
             {studyMdError ? (
               <p className="error-text">{studyMdError}</p>
             ) : studyMd === null ? (
-              <p className="loading">Loading…</p>
+              <p className="loading">불러오는 중…</p>
             ) : (
               <StudyMdViewer content={studyMd.content} />
             )}

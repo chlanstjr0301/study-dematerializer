@@ -138,15 +138,15 @@ export default function RecallSession() {
 
   return (
     <div>
-      <h1>Recall Session</h1>
+      <h1>인출 연습</h1>
 
       {/* Bank selector */}
       <div className="section">
-        <h2>Select a Question Bank</h2>
+        <h2>문제은행 선택</h2>
         {banksError ? (
           <p className="error-text">{banksError}</p>
         ) : banks === null ? (
-          <p className="loading">Loading banks…</p>
+          <p className="loading">문제은행 불러오는 중…</p>
         ) : banks.length === 0 ? (
           <div className="card">
             <h3>아직 인출 연습 문제가 없습니다.</h3>
@@ -194,7 +194,7 @@ export default function RecallSession() {
       {/* Questions */}
       {selected && (
         <div className="section">
-          <h2>Recall: {selected}</h2>
+          <h2>인출: {selected}</h2>
 
           {/* Mode banners */}
           {!targetReps && !repTypeFilter && (
@@ -203,7 +203,7 @@ export default function RecallSession() {
               borderRadius: 6, padding: '8px 14px', marginBottom: 12,
               fontSize: 14, color: '#374151',
             }}>
-              Mode: <strong>Full Recall</strong> — all accepted prompts for this concept
+              모드: <strong>전체 인출</strong> — 이 개념의 모든 승인된 질문
             </div>
           )}
           {targetReps && (
@@ -212,7 +212,7 @@ export default function RecallSession() {
               borderRadius: 6, padding: '8px 14px', marginBottom: 12,
               fontSize: 14, color: '#065f46',
             }}>
-              Due review: targeting <strong>{targetReps.join(', ')}</strong> representation(s)
+              복습 대상: <strong>{targetReps.join(', ')}</strong> 표현
             </div>
           )}
           {!targetReps && repTypeFilter && (
@@ -221,23 +221,23 @@ export default function RecallSession() {
               borderRadius: 6, padding: '8px 14px', marginBottom: 12,
               fontSize: 14, color: '#1e40af',
             }}>
-              Targeting: <strong>{repTypeFilter}</strong> representation
+              대상: <strong>{repTypeFilter}</strong> 표현
             </div>
           )}
 
           {questionsLoading ? (
-            <p className="loading">Loading questions…</p>
+            <p className="loading">질문 불러오는 중…</p>
           ) : questionsError ? (
             <p className="error-text">{questionsError}</p>
           ) : questions === null || questions.length === 0 ? (
-            <p className="empty-state">No accepted questions found.</p>
+            <p className="empty-state">승인된 질문이 없습니다.</p>
           ) : displayedQuestions.length === 0 ? (
             <p className="empty-state">
               {targetReps
-                ? <>No accepted questions target the due representations (<strong>{targetReps.join(', ')}</strong>).
-                    {' '}Use the Concept Compiler to generate and accept questions first.</>
-                : <>No accepted questions target the <strong>{repTypeFilter}</strong> representation.
-                    {' '}Use the Concept Compiler to generate and accept questions first.</>
+                ? <>복습 대상 표현(<strong>{targetReps.join(', ')}</strong>)에 해당하는 승인된 질문이 없습니다.
+                    {' '}개발자 도구 &gt; 컴파일러에서 질문을 먼저 생성하고 승인하세요.</>
+                : <>대상 표현(<strong>{repTypeFilter}</strong>)에 해당하는 승인된 질문이 없습니다.
+                    {' '}개발자 도구 &gt; 컴파일러에서 질문을 먼저 생성하고 승인하세요.</>
               }
             </p>
           ) : (
@@ -256,7 +256,7 @@ export default function RecallSession() {
                   )}
                   <textarea
                     className="recall-textarea"
-                    placeholder="Write your answer here…"
+                    placeholder="답변을 작성하세요…"
                     value={answers[q.id] ?? ''}
                     onChange={(e) => handleAnswerChange(q.id, e.target.value)}
                     disabled={submitting}
@@ -269,7 +269,7 @@ export default function RecallSession() {
                 onClick={handleSubmit}
                 disabled={submitDisabled}
               >
-                {submitting ? 'Submitting…' : 'Submit (mock grader)'}
+                {submitting ? '제출 중…' : '제출 (모의 채점)'}
               </button>
             </>
           )}
@@ -279,7 +279,7 @@ export default function RecallSession() {
       {/* Error */}
       {submitError && (
         <div className="error-box">
-          <strong>Submission failed:</strong>
+          <strong>제출 실패:</strong>
           {'\n'}{submitError}
         </div>
       )}
@@ -287,15 +287,15 @@ export default function RecallSession() {
       {/* Success */}
       {result && (
         <div className="success-box">
-          <h2>Session Created</h2>
+          <h2>세션 생성 완료</h2>
           <table className="table-simple" style={{ marginBottom: 16 }}>
             <tbody>
               <tr>
-                <th>Session ID</th>
+                <th>세션 ID</th>
                 <td style={{ fontFamily: 'monospace', fontSize: 13 }}>{result.session_id}</td>
               </tr>
               <tr>
-                <th>Attempts graded</th>
+                <th>채점된 응답 수</th>
                 <td>{result.attempt_count}</td>
               </tr>
             </tbody>
@@ -304,7 +304,7 @@ export default function RecallSession() {
           {result.summary_md && (
             <details style={{ marginBottom: 16 }}>
               <summary style={{ cursor: 'pointer', fontWeight: 600, marginBottom: 8 }}>
-                Session summary
+                세션 요약
               </summary>
               <pre className="pre-block" style={{ marginTop: 8 }}>{result.summary_md}</pre>
             </details>
@@ -313,14 +313,14 @@ export default function RecallSession() {
           {/* Mastery changes */}
           {masteryResult && (
             <div style={{ marginBottom: 16 }}>
-              <h3 style={{ marginBottom: 8 }}>Mastery Changes</h3>
+              <h3 style={{ marginBottom: 8 }}>숙련도 변화</h3>
               <table className="table-simple">
                 <thead>
                   <tr>
-                    <th>Representation</th>
-                    <th>Before</th>
-                    <th>After</th>
-                    <th>Score</th>
+                    <th>표현</th>
+                    <th>이전</th>
+                    <th>이후</th>
+                    <th>점수</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -351,9 +351,9 @@ export default function RecallSession() {
             );
             return (
               <div style={{ marginBottom: 16 }}>
-                <h3 style={{ marginBottom: 8 }}>Weak Questions</h3>
+                <h3 style={{ marginBottom: 8 }}>취약 질문</h3>
                 {weak.length === 0 ? (
-                  <p style={{ fontSize: 14, color: '#15803d' }}>No weak questions — great work!</p>
+                  <p style={{ fontSize: 14, color: '#15803d' }}>취약 질문 없음 — 잘했습니다!</p>
                 ) : (
                   weak.map((f, i) => (
                     <div key={i} style={{
@@ -365,7 +365,7 @@ export default function RecallSession() {
                           background: '#fef3c7', color: '#92400e', fontSize: 11,
                           padding: '1px 6px', borderRadius: 4, marginRight: 6, fontWeight: 600,
                         }}>
-                          ⚠ Review
+                          ⚠ 검토 필요
                         </span>
                       )}
                       <span style={{ fontFamily: 'monospace', color: '#555', fontSize: 11 }}>
@@ -388,10 +388,10 @@ export default function RecallSession() {
 
           <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
             <Link className="session-link" to={`/sessions/${result.session_id}`}>
-              View Session Detail →
+              세션 상세 보기 →
             </Link>
             <Link className="session-link" to="/dashboard">
-              Back to Dashboard →
+              대시보드로 돌아가기 →
             </Link>
           </div>
         </div>
