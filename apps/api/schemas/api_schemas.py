@@ -277,3 +277,81 @@ class AnalyzeResponse(BaseModel):
     prerequisite_checks: list[PrerequisiteCheck]
     recommended_actions: list[RecommendedAction]
     representations: dict[str, str] | None = None
+
+
+# ---------------------------------------------------------------------------
+# MVP5-2: Study Session API
+# ---------------------------------------------------------------------------
+
+class CreateStudySessionRequest(BaseModel):
+    concept_id: str
+    source_relative_path: str | None = None
+
+
+class PrerequisiteInfo(BaseModel):
+    concept_id: str
+    name_ko: str
+    mastery: str  # "unknown" | "partial" | "solid"
+
+
+class MisconceptionInfo(BaseModel):
+    id: str
+    claim: str
+    is_correct: bool
+
+
+class CreateStudySessionResponse(BaseModel):
+    session_id: str
+    concept_id: str
+    canonical_name_ko: str
+    current_step: int
+    steps: list[str]
+    representations: dict[str, str]
+    prerequisites: list[PrerequisiteInfo]
+    misconceptions: list[MisconceptionInfo]
+
+
+class DiagnosisData(BaseModel):
+    prior_knowledge: str
+    gap_description: str
+    initial_mastery_estimate: str
+    identified_gaps: list[str]
+    recommendation: str
+
+
+class StudySessionStateResponse(BaseModel):
+    session_id: str
+    concept_id: str
+    canonical_name_ko: str
+    current_step: int
+    steps: list[str]
+    steps_completed: list[str]
+    diagnosis: DiagnosisData | None = None
+    self_explanations: dict[str, Any] | None = None
+    recall_completed: bool
+    recall_session_id: str | None = None
+    completed: bool
+    completed_at: str | None = None
+    created_at: str
+    updated_at: str
+
+
+class DiagnoseRequest(BaseModel):
+    prior_knowledge: str = ""
+    gap_description: str = ""
+
+
+class DiagnoseResponse(BaseModel):
+    initial_mastery_estimate: str
+    identified_gaps: list[str]
+    recommendation: str
+
+
+class AdvanceStepRequest(BaseModel):
+    completed_step: str
+
+
+class AdvanceStepResponse(BaseModel):
+    current_step: int
+    current_step_name: str
+    steps_completed: list[str]
