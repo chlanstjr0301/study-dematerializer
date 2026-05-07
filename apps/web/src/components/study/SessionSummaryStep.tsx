@@ -1,11 +1,12 @@
 import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import type { CompleteStudySessionResponse } from '../../api/types';
+import type { CompleteStudySessionResponse, ConfusionMapData } from '../../api/types';
 
 interface SessionSummaryStepProps {
   conceptId: string;
   canonicalNameKo: string;
   stepsCompleted: string[];
+  confusionMap?: ConfusionMapData | null;
   onComplete: () => void;
   completing: boolean;
   completionResult: CompleteStudySessionResponse | null;
@@ -27,13 +28,16 @@ const MASTERY_LABELS: Record<string, string> = {
   solid: '숙련',
 };
 
-const TOTAL_STEPS = 6;
+const TOTAL_STEPS = 7;
+
+const UNSCORED_REPS = new Set(['intuitive', 'visual']);
 
 export default function SessionSummaryStep({
   // conceptId and canonicalNameKo available for future use (completion_summary uses them server-side)
   conceptId: _conceptId,
   canonicalNameKo: _canonicalNameKo,
   stepsCompleted,
+  confusionMap,
   onComplete,
   completing,
   completionResult,
@@ -91,7 +95,7 @@ export default function SessionSummaryStep({
                 인출 연습 단계로 돌아가서 인출 응답을 제출해 주세요.
               </p>
               {onGoToStep && (
-                <button className="submit-btn" style={{ marginTop: 8, background: '#d97706', fontSize: 13 }} onClick={() => onGoToStep(5)}>
+                <button className="submit-btn" style={{ marginTop: 8, background: '#d97706', fontSize: 13 }} onClick={() => onGoToStep(6)}>
                   인출 연습으로 돌아가기
                 </button>
               )}
@@ -143,7 +147,12 @@ export default function SessionSummaryStep({
             <tbody>
               {completionResult.mastery_updates.map((mu) => (
                 <tr key={mu.representation_type}>
-                  <td>{REP_LABELS[mu.representation_type] ?? mu.representation_type}</td>
+                  <td>
+                    {REP_LABELS[mu.representation_type] ?? mu.representation_type}
+                    {UNSCORED_REPS.has(mu.representation_type) && (
+                      <span style={{ fontSize: 11, color: '#94a3b8', marginLeft: 6 }}>학습 보조 (미채점)</span>
+                    )}
+                  </td>
                   <td><span className="badge badge-overdue">{MASTERY_LABELS[mu.before] ?? mu.before}</span></td>
                   <td>
                     <span className={`badge ${mu.after === 'solid' ? 'badge-solid' : mu.after === 'partial' ? 'badge-partial' : 'badge-overdue'}`}>
@@ -155,6 +164,37 @@ export default function SessionSummaryStep({
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* MVP6: Confusion map summary */}
+      {confusionMap && (confusionMap.mapping_edges.length > 0 || confusionMap.misconception_tags.length > 0 || confusionMap.next_recall_triggers.length > 0) && (
+        <div style={{
+          background: '#fefce8', border: '1px solid #fde68a',
+          borderRadius: 8, padding: '14px 18px', marginBottom: 20,
+        }}>
+          <h3 style={{ fontSize: 14, fontWeight: 600, color: '#92400e', marginBottom: 8 }}>혼동 지도 요약</h3>
+          {confusionMap.mapping_edges.filter(e => !e.passed).length > 0 && (
+            <p style={{ fontSize: 13, color: '#92400e', marginBottom: 4 }}>
+              실패한 매핑:{' '}
+              {confusionMap.mapping_edges.filter(e => !e.passed).map(e => `${e.from_rep} → ${e.to_rep}`).join(', ')}
+            </p>
+          )}
+          {confusionMap.misconception_tags.length > 0 && (
+            <p style={{ fontSize: 13, color: '#b91c1c', marginBottom: 4 }}>
+              활성 오개념: {confusionMap.misconception_tags.join(', ')}
+            </p>
+          )}
+          {confusionMap.next_recall_triggers.length > 0 && (
+            <div style={{ fontSize: 13, color: '#1e40af', marginTop: 4 }}>
+              다음 인출 과제:
+              <ul style={{ margin: '4px 0 0 16px', padding: 0 }}>
+                {confusionMap.next_recall_triggers.map((t, i) => (
+                  <li key={i} style={{ fontStyle: 'italic' }}>{t}</li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
       )}
 

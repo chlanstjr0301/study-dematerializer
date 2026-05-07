@@ -8,6 +8,9 @@ import {
   submitSelfExplanation,
   submitRecall,
   completeStudySession,
+  getMappingTasks,
+  submitMapping,
+  getConfusionMap,
 } from '../api/client';
 import type {
   CreateStudySessionResponse,
@@ -15,17 +18,22 @@ import type {
   SelfExplainResponse,
   RecallSubmitResponse,
   CompleteStudySessionResponse,
+  MappingTaskItem,
+  MappingSubmitResult,
+  ConfusionMapData,
 } from '../api/types';
 import StudyStepper from '../components/study/StudyStepper';
 import DiagnosisStep from '../components/study/DiagnosisStep';
 import PrerequisiteStep from '../components/study/PrerequisiteStep';
 import RepresentationStep from '../components/study/RepresentationStep';
+import MappingCheckStep from '../components/study/MappingCheckStep';
 import MisconceptionStep from '../components/study/MisconceptionStep';
 import WhiteRecallStep from '../components/study/WhiteRecallStep';
 import SessionSummaryStep from '../components/study/SessionSummaryStep';
+import ConfusionMapPanel from '../components/study/ConfusionMapPanel';
 
-const STEP_LABELS = ['진단', '선행 확인', '표현 학습', '오개념 체크', '인출 연습', '세션 정리'];
-const STEPS = ['diagnose', 'prerequisites', 'representations', 'misconceptions', 'recall', 'summary'];
+const STEP_LABELS = ['진단', '선행 확인', '표현 학습', '매핑 과제', '오개념 체크', '인출 연습', '세션 정리'];
+const STEPS = ['diagnose', 'prerequisites', 'representations', 'mapping', 'misconceptions', 'recall', 'summary'];
 
 function storageKey(conceptId: string) {
   return `study_session_${conceptId}`;
@@ -63,10 +71,39 @@ export default function StudySession() {
   const [selfExplainSubmitting, setSelfExplainSubmitting] = useState(false);
   const [recallSubmitting, setRecallSubmitting] = useState(false);
 
+  // MVP6: Mapping + Confusion Map state
+  const [confusionMap, setConfusionMap] = useState<ConfusionMapData | null>(null);
+  const [confusionMapLoading, setConfusionMapLoading] = useState(false);
+  const [mappingTasks, setMappingTasks] = useState<MappingTaskItem[]>([]);
+  const [mappingResults, setMappingResults] = useState<MappingSubmitResult[]>([]);
+
   useEffect(() => {
     initSession();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [conceptId]);
+
+  // MVP6: Load confusion map (best-effort, never blocks)
+  async function loadConfusionMap(sid: string) {
+    setConfusionMapLoading(true);
+    try {
+      const cmap = await getConfusionMap(sid);
+      setConfusionMap(cmap);
+    } catch {
+      // best-effort — confusion map may not exist yet
+    } finally {
+      setConfusionMapLoading(false);
+    }
+  }
+
+  // MVP6: Load mapping tasks (best-effort)
+  async function loadMappingTasks(sid: string) {
+    try {
+      const resp = await getMappingTasks(sid);
+      setMappingTasks(resp.tasks);
+    } catch {
+      // tasks may not exist yet
+    }
+  }
 
   async function initSession() {
     setLoading(true);
@@ -94,6 +131,9 @@ export default function StudySession() {
             recommendation: state.diagnosis.recommendation,
           });
         }
+        // MVP6: restore confusion map + mapping tasks
+        loadConfusionMap(sid);
+        loadMappingTasks(sid);
         setLoading(false);
         return;
       } catch {
@@ -118,6 +158,8 @@ export default function StudySession() {
         sessionId: resp.session_id,
         createResponse: resp,
       }));
+      // MVP6: load confusion map after creation
+      loadConfusionMap(resp.session_id);
       setLoading(false);
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
@@ -149,6 +191,8 @@ export default function StudySession() {
       setDiagnosisResult(result);
       setStepsCompleted(prev => [...prev, 'diagnose']);
       setCurrentStep(2);
+      // MVP6: refresh confusion map after diagnosis
+      if (sessionId) loadConfusionMap(sessionId);
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       setStepError(`진단 제출 실패: ${msg}`);
@@ -171,6 +215,13 @@ export default function StudySession() {
       setCurrentStep(resp.current_step);
       setStepsCompleted(resp.steps_completed);
       setViewingStep(resp.current_step);
+      // MVP6: refresh confusion map after advance
+      loadConfusionMap(sessionId);
+      // MVP6: load mapping tasks when entering mapping step
+      const newStepName = STEPS[resp.current_step - 1];
+      if (newStepName === 'mapping') {
+        loadMappingTasks(sessionId);
+      }
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       setStepError(`단계 진행 실패: ${msg}`);
@@ -190,6 +241,8 @@ export default function StudySession() {
         learner_explanation: learnerExplanation,
       });
       setSelfExplanationResults(prev => ({ ...prev, [representationType]: result }));
+      // MVP6: refresh confusion map after self-explanation
+      loadConfusionMap(sessionId);
       return result;
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
@@ -210,6 +263,8 @@ export default function StudySession() {
         learner_response: learnerResponse,
       });
       setRecallResult(result);
+      // MVP6: refresh confusion map after recall
+      loadConfusionMap(sessionId);
       return result;
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
@@ -245,6 +300,15 @@ export default function StudySession() {
     } finally {
       setCompleting(false);
     }
+  }
+
+  // --- MVP6: Mapping Submit ---
+  async function handleMappingSubmit(taskId: string, response: string): Promise<MappingSubmitResult> {
+    if (!sessionId) throw new Error('No session');
+    const result = await submitMapping(sessionId, taskId, response);
+    setMappingResults(prev => [...prev, result]);
+    setConfusionMap(result.confusion_map);
+    return result;
   }
 
   // --- Navigation ---
@@ -299,6 +363,94 @@ export default function StudySession() {
   const completedIndices = stepsCompleted.map(s => STEPS.indexOf(s));
   const readOnly = viewingStep < currentStep;
 
+  // MVP6: Steps 3-5 (mapping, misconceptions, recall) use split layout with confusion panel
+  const showSplitLayout = displayStep >= 3 && displayStep <= 5;
+
+  function renderStepContent() {
+    if (!sessionData) return null;
+    return (
+      <>
+        {stepError && (
+          <p style={{ color: '#dc2626', fontSize: 13, marginBottom: 12 }}>{stepError}</p>
+        )}
+
+        {displayStep === 0 && (
+          <DiagnosisStep
+            initialKnowledge={priorKnowledge}
+            initialGap={gap}
+            onSubmit={handleDiagnoseSubmit}
+            submitting={advancing}
+            result={diagnosisResult}
+            onConfirm={handleDiagnoseConfirm}
+            readOnly={readOnly}
+          />
+        )}
+        {displayStep === 1 && (
+          <PrerequisiteStep
+            prerequisites={sessionData.prerequisites}
+            onNext={() => handleAdvance('prerequisites')}
+            advancing={advancing}
+            readOnly={readOnly}
+          />
+        )}
+        {displayStep === 2 && (
+          <RepresentationStep
+            representations={sessionData.representations}
+            onNext={() => handleAdvance('representations')}
+            onSubmitSelfExplanation={handleSubmitSelfExplanation}
+            selfExplanationResults={selfExplanationResults}
+            selfExplainSubmitting={selfExplainSubmitting}
+            advancing={advancing}
+            readOnly={readOnly}
+          />
+        )}
+        {displayStep === 3 && (
+          <MappingCheckStep
+            sessionId={sessionId!}
+            tasks={mappingTasks}
+            results={mappingResults}
+            confusionMap={confusionMap}
+            readOnly={readOnly}
+            onTaskSubmit={handleMappingSubmit}
+            onAllComplete={() => handleAdvance('mapping')}
+          />
+        )}
+        {displayStep === 4 && (
+          <MisconceptionStep
+            misconceptions={sessionData.misconceptions}
+            onNext={() => handleAdvance('misconceptions')}
+            advancing={advancing}
+            readOnly={readOnly}
+          />
+        )}
+        {displayStep === 5 && (
+          <WhiteRecallStep
+            conceptId={concept}
+            onSubmitRecall={handleSubmitRecall}
+            onNext={() => handleAdvance('recall')}
+            recallResult={recallResult}
+            recallSubmitting={recallSubmitting}
+            advancing={advancing}
+            readOnly={readOnly}
+          />
+        )}
+        {displayStep === 6 && (
+          <SessionSummaryStep
+            conceptId={concept}
+            canonicalNameKo={sessionData.canonical_name_ko}
+            stepsCompleted={stepsCompleted}
+            confusionMap={confusionMap}
+            onComplete={handleCompleteSession}
+            completing={completing}
+            completionResult={completionResult}
+            completionError={completionError}
+            onGoToStep={(step) => setViewingStep(step)}
+          />
+        )}
+      </>
+    );
+  }
+
   return (
     <div>
       <h1 style={{ marginBottom: 8 }}>학습 세션: {sessionData.canonical_name_ko}</h1>
@@ -310,77 +462,22 @@ export default function StudySession() {
       />
 
       <div className="section">
-        <div className="card">
-          {stepError && (
-            <p style={{ color: '#dc2626', fontSize: 13, marginBottom: 12 }}>{stepError}</p>
-          )}
-
-          {displayStep === 0 && (
-            <DiagnosisStep
-              initialKnowledge={priorKnowledge}
-              initialGap={gap}
-              onSubmit={handleDiagnoseSubmit}
-              submitting={advancing}
-              result={diagnosisResult}
-              onConfirm={handleDiagnoseConfirm}
-              readOnly={readOnly}
-            />
-          )}
-          {displayStep === 1 && (
-            <PrerequisiteStep
-              prerequisites={sessionData.prerequisites}
-              onNext={() => handleAdvance('prerequisites')}
-              advancing={advancing}
-              readOnly={readOnly}
-            />
-          )}
-          {displayStep === 2 && (
-            <RepresentationStep
-              representations={sessionData.representations}
-              onNext={() => handleAdvance('representations')}
-              onSubmitSelfExplanation={handleSubmitSelfExplanation}
-              selfExplanationResults={selfExplanationResults}
-              selfExplainSubmitting={selfExplainSubmitting}
-              advancing={advancing}
-              readOnly={readOnly}
-            />
-          )}
-          {displayStep === 3 && (
-            <MisconceptionStep
-              misconceptions={sessionData.misconceptions}
-              onNext={() => handleAdvance('misconceptions')}
-              advancing={advancing}
-              readOnly={readOnly}
-            />
-          )}
-          {displayStep === 4 && (
-            <WhiteRecallStep
-              conceptId={concept}
-              onSubmitRecall={handleSubmitRecall}
-              onNext={() => handleAdvance('recall')}
-              recallResult={recallResult}
-              recallSubmitting={recallSubmitting}
-              advancing={advancing}
-              readOnly={readOnly}
-            />
-          )}
-          {displayStep === 5 && (
-            <SessionSummaryStep
-              conceptId={concept}
-              canonicalNameKo={sessionData.canonical_name_ko}
-              stepsCompleted={stepsCompleted}
-              onComplete={handleCompleteSession}
-              completing={completing}
-              completionResult={completionResult}
-              completionError={completionError}
-              onGoToStep={(step) => setViewingStep(step)}
-            />
-          )}
-        </div>
+        {showSplitLayout ? (
+          <div className="study-session-split">
+            <div className="study-session-split__main">
+              <div className="card">{renderStepContent()}</div>
+            </div>
+            <div className="study-session-split__panel">
+              <ConfusionMapPanel confusionMap={confusionMap} loading={confusionMapLoading} />
+            </div>
+          </div>
+        ) : (
+          <div className="card">{renderStepContent()}</div>
+        )}
       </div>
 
       {/* Navigation */}
-      {viewingStep > 1 && displayStep < 5 && (
+      {viewingStep > 1 && displayStep < 6 && (
         <div style={{ marginTop: 12, display: 'flex', gap: 8 }}>
           <button
             className="submit-btn"
