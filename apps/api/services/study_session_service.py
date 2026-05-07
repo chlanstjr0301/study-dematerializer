@@ -27,6 +27,112 @@ logger = logging.getLogger("gonghaebun.api.study_session")
 
 
 # ---------------------------------------------------------------------------
+# Confusion map helpers (best-effort, never block session flow)
+# ---------------------------------------------------------------------------
+
+
+def _try_init_confusion_map(session_id: str, concept_id: str, output_dir: Path) -> bool:
+    """Initialize confusion map + mapping tasks if card exists. Returns True on success."""
+    try:
+        from apps.api.services.card_service import CardNotFoundError, load_ground_truth_card
+        from apps.api.services.confusion_map_service import initialize_confusion_map, persist_confusion_map
+        from apps.api.services.mapping_service import generate_mapping_tasks
+
+        card = load_ground_truth_card(concept_id, use_cache=True)
+
+        # Initialize confusion map
+        cmap = initialize_confusion_map(session_id, concept_id, card)
+        persist_confusion_map(cmap, output_dir)
+
+        # Generate mapping tasks
+        tasks = generate_mapping_tasks(session_id, concept_id, card)
+        tasks_path = output_dir / "mapping_tasks.json"
+        tasks_path.write_text(
+            json.dumps([t.model_dump() for t in tasks], ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+        return True
+    except Exception:
+        logger.debug("confusion_map_init_skipped session=%s concept=%s", session_id, concept_id)
+        return False
+
+
+def _try_update_confusion_map_diagnosis(session_dir: Path, initial_mastery_estimate: str, identified_gaps: list[str]) -> None:
+    """Update confusion map after diagnosis step."""
+    try:
+        from apps.api.services.confusion_map_service import load_confusion_map, persist_confusion_map, update_from_diagnosis
+
+        cmap = load_confusion_map(session_dir)
+        if cmap is None:
+            return
+
+        # Map initial mastery estimate to all prerequisites
+        mastery_estimates = {n.concept_id: initial_mastery_estimate for n in cmap.prerequisite_nodes}
+        # Use identified_gaps as misconception_cues (descriptive, not IDs, but still useful)
+        cmap = update_from_diagnosis(cmap, {
+            "mastery_estimates": mastery_estimates,
+            "misconception_cues": identified_gaps,
+        })
+        persist_confusion_map(cmap, session_dir)
+    except Exception:
+        logger.debug("confusion_map_diagnosis_update_skipped dir=%s", session_dir)
+
+
+def _try_update_confusion_map_self_explanation(session_dir: Path, rep_type: str, score: float, missing: list[str], errors: list[str], feedback: str) -> None:
+    """Update confusion map after self-explanation evaluation."""
+    try:
+        from apps.api.services.confusion_map_service import load_confusion_map, persist_confusion_map, update_from_self_explanation
+        from gonghaebun.models.evaluation_output import EvaluationOutput
+
+        cmap = load_confusion_map(session_dir)
+        if cmap is None:
+            return
+
+        mastery = "solid" if score >= 0.80 else ("partial" if score >= 0.50 else "unknown")
+        eval_output = EvaluationOutput(
+            score=score,
+            mastery=mastery,
+            passed=score >= 0.70,
+            missing_elements=missing,
+            incorrect_claims=errors,
+            misconception_tags=[],
+            mapping_failures=[],
+            feedback=feedback,
+        )
+        cmap = update_from_self_explanation(cmap, rep_type, eval_output)
+        persist_confusion_map(cmap, session_dir)
+    except Exception:
+        logger.debug("confusion_map_self_explain_update_skipped dir=%s rep=%s", session_dir, rep_type)
+
+
+def _try_update_confusion_map_recall(session_dir: Path, score: float, missing: list[str], errors: list[str], feedback: str) -> None:
+    """Update confusion map after recall evaluation."""
+    try:
+        from apps.api.services.confusion_map_service import load_confusion_map, persist_confusion_map, update_from_recall
+        from gonghaebun.models.evaluation_output import EvaluationOutput
+
+        cmap = load_confusion_map(session_dir)
+        if cmap is None:
+            return
+
+        mastery = "solid" if score >= 0.80 else ("partial" if score >= 0.50 else "unknown")
+        eval_output = EvaluationOutput(
+            score=score,
+            mastery=mastery,
+            passed=score >= 0.70,
+            missing_elements=missing,
+            incorrect_claims=errors,
+            misconception_tags=[],
+            mapping_failures=[],
+            feedback=feedback,
+        )
+        cmap = update_from_recall(cmap, eval_output)
+        persist_confusion_map(cmap, session_dir)
+    except Exception:
+        logger.debug("confusion_map_recall_update_skipped dir=%s", session_dir)
+
+
+# ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
 
@@ -113,7 +219,10 @@ def create_study_session(
     prerequisites = _extract_prerequisites(graph_data, concept_id)
     misconceptions = _extract_misconceptions(diagnosis_data)
 
-    # 8. Write study_session_state.json
+    # 8. Initialize confusion map + mapping tasks (best-effort)
+    cmap_initialized = _try_init_confusion_map(session_id, concept_id, output_dir)
+
+    # 9. Write study_session_state.json
     now = datetime.now(timezone.utc).isoformat()
     canonical_name_ko = KOREAN_NAMES.get(concept_id, concept_id)
 
@@ -131,6 +240,7 @@ def create_study_session(
         "recall_session_id": None,
         "completed": False,
         "completed_at": None,
+        "confusion_map_initialized": cmap_initialized,
         "created_at": now,
         "updated_at": now,
     }
@@ -204,7 +314,12 @@ def submit_diagnosis(
     state["current_step"] = 2
     state["updated_at"] = datetime.now(timezone.utc).isoformat()
 
-    _write_state(_runs_dir / session_id, state)
+    session_dir = _runs_dir / session_id
+    _write_state(session_dir, state)
+
+    # Update confusion map with diagnosis data
+    if state.get("confusion_map_initialized"):
+        _try_update_confusion_map_diagnosis(session_dir, initial_mastery_estimate, identified_gaps)
 
     return {
         "initial_mastery_estimate": initial_mastery_estimate,
@@ -307,6 +422,14 @@ def submit_self_explanation(
     state["updated_at"] = datetime.now(timezone.utc).isoformat()
     _write_state(session_dir, state)
 
+    # Update confusion map with self-explanation quality signals
+    if state.get("confusion_map_initialized"):
+        _try_update_confusion_map_self_explanation(
+            session_dir, representation_type,
+            evaluation.accuracy_score, evaluation.missing_elements,
+            evaluation.errors, evaluation.feedback,
+        )
+
     return {
         "representation_type": representation_type,
         "accuracy_score": evaluation.accuracy_score,
@@ -371,6 +494,14 @@ def submit_recall(
     state["recall_completed"] = True
     state["updated_at"] = datetime.now(timezone.utc).isoformat()
     _write_state(session_dir, state)
+
+    # Update confusion map with recall evaluation
+    if state.get("confusion_map_initialized"):
+        _try_update_confusion_map_recall(
+            session_dir,
+            evaluation.accuracy_score, evaluation.missing_elements,
+            evaluation.errors, evaluation.feedback,
+        )
 
     return {
         "accuracy_score": evaluation.accuracy_score,
@@ -516,6 +647,16 @@ def complete_session(
         apply_patch(_study_md, study_session_obj)
     except Exception as e:
         raise StudyMdUpdateError(f"STUDY.md 업데이트에 실패했습니다: {e}") from e
+
+    # Persist final confusion map snapshot
+    try:
+        from apps.api.services.confusion_map_service import load_confusion_map, persist_confusion_map
+        cmap = load_confusion_map(session_dir)
+        if cmap is not None:
+            cmap.last_updated_step = "complete"
+            persist_confusion_map(cmap, session_dir)
+    except Exception:
+        logger.debug("confusion_map_final_persist_skipped session=%s", session_id)
 
     # Only mark completed after successful STUDY.md update
     state["completed"] = True

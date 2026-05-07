@@ -54,6 +54,8 @@ def get_study_session(session_id: str):
         state = svc.get_study_session(session_id)
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail=f"세션을 찾을 수 없습니다: {session_id}")
+    # Ensure confusion_map_initialized is present for older sessions
+    state.setdefault("confusion_map_initialized", False)
     return StudySessionStateResponse(**state)
 
 
