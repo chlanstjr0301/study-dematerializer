@@ -18,6 +18,12 @@ RUNS_DIR   = Path(os.getenv("GONGHAEBUN_RUNS_DIR",  str(DATA_ROOT / "runs")))
 STUDY_MD    = Path(os.getenv("GONGHAEBUN_STUDY_MD",    str(DATA_ROOT / "STUDY.md")))
 SOURCES_DIR = Path(os.getenv("GONGHAEBUN_SOURCES_DIR", str(DATA_ROOT / "sources")))
 
+# Ground Truth Cards default to the tracked source path (src/gonghaebun/cards/).
+# Override with GONGHAEBUN_CARDS_DIR for custom deployments.
+_REPO_ROOT  = Path(__file__).resolve().parent.parent.parent
+CARDS_DIR   = Path(os.getenv("GONGHAEBUN_CARDS_DIR",
+                              str(_REPO_ROOT / "src" / "gonghaebun" / "cards")))
+
 # LLM grader guardrails
 LLM_MAX_CALLS_PER_SESSION = int(os.getenv("GONGHAEBUN_LLM_MAX_CALLS_PER_SESSION", "20"))
 LLM_TIMEOUT_SECONDS       = float(os.getenv("GONGHAEBUN_LLM_TIMEOUT_SECONDS", "30"))
