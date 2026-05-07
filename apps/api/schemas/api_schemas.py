@@ -401,3 +401,71 @@ class CompleteStudySessionResponse(BaseModel):
     study_md_updated: bool
     study_patch_path: str | None
     completion_summary: str
+
+
+# ---------------------------------------------------------------------------
+# MVP6: Mapping Tasks + Confusion Map
+# ---------------------------------------------------------------------------
+
+class MappingTaskItem(BaseModel):
+    task_id: str
+    task_type: str
+    prompt: str                         # Korean
+    source_representations: list[str]
+    target_representation: str
+
+
+class MappingTasksResponse(BaseModel):
+    session_id: str
+    concept_id: str
+    tasks: list[MappingTaskItem]
+
+
+class MappingSubmitRequest(BaseModel):
+    task_id: str
+    learner_response: str               # Korean text
+
+
+class PrerequisiteNodeItem(BaseModel):
+    concept_id: str
+    mastery: str
+    self_reported: str | None = None
+
+
+class MappingEdgeItem(BaseModel):
+    from_rep: str
+    to_rep: str
+    task_type: str
+    passed: bool
+    score: float
+
+
+class EvidenceSnippetItem(BaseModel):
+    step: str
+    task_type: str | None = None
+    learner_text: str
+    issue: str
+
+
+class ConfusionMapResponse(BaseModel):
+    concept_id: str
+    session_id: str
+    prerequisite_nodes: list[PrerequisiteNodeItem]
+    mapping_edges: list[MappingEdgeItem]
+    misconception_tags: list[str]
+    next_recall_triggers: list[str]
+    evidence_snippets: list[EvidenceSnippetItem]
+    last_updated_step: str
+
+
+class MappingSubmitResponse(BaseModel):
+    task_id: str
+    task_type: str
+    score: float
+    passed: bool
+    missing_elements: list[str]
+    misconception_tags: list[str]
+    mapping_failures: list[str]
+    feedback: str                       # Korean
+    next_recall_trigger: str
+    confusion_map: ConfusionMapResponse
