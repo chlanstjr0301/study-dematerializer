@@ -6,6 +6,8 @@ Runs Stages 0–7 in sequence and writes all 10 artifacts to output_dir.
 from __future__ import annotations
 
 import json
+import logging
+import time
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -25,6 +27,8 @@ from gonghaebun.pipeline.self_explanation import render_self_explanation_prompt
 from gonghaebun.pipeline.source_loader import load_and_extract
 from gonghaebun.pipeline.study_writer import write_study_artifacts
 from gonghaebun.study_md.writer import compute_mastery_state, compute_next_review_date
+
+logger = logging.getLogger("gonghaebun.session")
 
 
 def run_new_concept_session(
@@ -63,6 +67,8 @@ def run_new_concept_session(
     # ------------------------------------------------------------------
     # Stage 0: Source Loader
     # ------------------------------------------------------------------
+    logger.info("stage_start stage=0 name=source_loader concept=%s", concept_input)
+    _t0 = time.monotonic()
     concept = resolve_concept(concept_input)
     concept_id = concept.concept_id
     keywords = CONCEPT_KEYWORDS.get(concept_id, [])
@@ -76,10 +82,13 @@ def run_new_concept_session(
 
     source_excerpt_path = output_dir / "source_excerpt.md"
     source_excerpt = source_excerpt_path.read_text(encoding="utf-8")
+    logger.info("stage_done stage=0 elapsed_ms=%.0f", (time.monotonic() - _t0) * 1000)
 
     # ------------------------------------------------------------------
     # Stage 1: Concept Resolver — write concept_decomposition.json
     # ------------------------------------------------------------------
+    logger.info("stage_start stage=1 name=concept_resolver concept=%s", concept_id)
+    _t0 = time.monotonic()
     concept_decomposition = {
         "concept_id": concept_id,
         "canonical_name": concept.canonical_name,
@@ -95,10 +104,13 @@ def run_new_concept_session(
         json.dumps(concept_decomposition, ensure_ascii=False, indent=2),
         encoding="utf-8",
     )
+    logger.info("stage_done stage=1 elapsed_ms=%.0f", (time.monotonic() - _t0) * 1000)
 
     # ------------------------------------------------------------------
     # Stage 2: Prerequisite Graph — write prerequisite_graph.json
     # ------------------------------------------------------------------
+    logger.info("stage_start stage=2 name=graph_builder concept=%s", concept_id)
+    _t0 = time.monotonic()
     graph = build_prerequisite_graph(concept_id)
     graph_data = {
         "root_concept_id": graph.root_concept_id,
@@ -121,10 +133,13 @@ def run_new_concept_session(
         json.dumps(graph_data, ensure_ascii=False, indent=2),
         encoding="utf-8",
     )
+    logger.info("stage_done stage=2 elapsed_ms=%.0f", (time.monotonic() - _t0) * 1000)
 
     # ------------------------------------------------------------------
     # Stage 3: Representation Generator — write representation_cards.md
     # ------------------------------------------------------------------
+    logger.info("stage_start stage=3 name=representation_gen concept=%s", concept_id)
+    _t0 = time.monotonic()
     rep_set = generate_representations(
         concept_id=concept_id,
         source_excerpt=source_excerpt,
@@ -147,6 +162,7 @@ def run_new_concept_session(
         json.dumps(rep_set_data, ensure_ascii=False, indent=2),
         encoding="utf-8",
     )
+    logger.info("stage_done stage=3 elapsed_ms=%.0f", (time.monotonic() - _t0) * 1000)
 
     # ------------------------------------------------------------------
     # Stage 5 (template only): Self-Explanation Prompt
@@ -157,6 +173,8 @@ def run_new_concept_session(
     # ------------------------------------------------------------------
     # Stage 4: Misconception Checker — write diagnosis.json
     # ------------------------------------------------------------------
+    logger.info("stage_start stage=4 name=misconception_checker concept=%s", concept_id)
+    _t0 = time.monotonic()
     diagnosis = check_misconceptions(
         concept_id=concept_id,
         rep_set=rep_set,
@@ -167,10 +185,13 @@ def run_new_concept_session(
         json.dumps(diagnosis, ensure_ascii=False, indent=2),
         encoding="utf-8",
     )
+    logger.info("stage_done stage=4 elapsed_ms=%.0f", (time.monotonic() - _t0) * 1000)
 
     # ------------------------------------------------------------------
     # Stage 6: White Recall — write recall_tasks.md
     # ------------------------------------------------------------------
+    logger.info("stage_start stage=6 name=recall_orchestrator concept=%s", concept_id)
+    _t0 = time.monotonic()
     # Default mastery for a brand-new concept
     recall_mastery = "unknown"
     tasks_data = generate_recall_tasks(
@@ -184,6 +205,7 @@ def run_new_concept_session(
         json.dumps(tasks_data, ensure_ascii=False, indent=2),
         encoding="utf-8",
     )
+    logger.info("stage_done stage=6 elapsed_ms=%.0f", (time.monotonic() - _t0) * 1000)
 
     # ------------------------------------------------------------------
     # Build mastery updates (one per representation type, from recall tasks)
@@ -225,7 +247,10 @@ def run_new_concept_session(
     # ------------------------------------------------------------------
     # Stage 7: Study Writer — STUDY.patch.md + STUDY.md
     # ------------------------------------------------------------------
+    logger.info("stage_start stage=7 name=study_writer concept=%s", concept_id)
+    _t0 = time.monotonic()
     write_study_artifacts(session, output_dir, study_md_path)
+    logger.info("stage_done stage=7 elapsed_ms=%.0f", (time.monotonic() - _t0) * 1000)
 
     # ------------------------------------------------------------------
     # Write session.json (artifact 10)

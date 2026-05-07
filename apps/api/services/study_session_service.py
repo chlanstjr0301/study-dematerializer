@@ -4,7 +4,9 @@ Service: Study Session — full pipeline lifecycle for integrated study sessions
 from __future__ import annotations
 
 import json
+import logging
 import shutil
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 from uuid import uuid4
@@ -20,6 +22,8 @@ VALID_REPRESENTATION_TYPES = {"formal", "intuitive", "visual", "counterexample",
 REQUIRED_SELF_EXPLANATIONS = {"formal", "proof_schema"}
 
 _ALLOWED_SOURCE_EXTS = {".md", ".txt"}
+
+logger = logging.getLogger("gonghaebun.api.study_session")
 
 
 # ---------------------------------------------------------------------------
@@ -73,6 +77,11 @@ def create_study_session(
 
     # 5. Run full 8-stage pipeline
     llm = get_llm_client()
+    logger.info(
+        "session_create_start concept=%s session=%s llm=%s",
+        concept_id, session_id, llm.__class__.__name__,
+    )
+    t0 = time.monotonic()
     run_new_concept_session(
         concept_input=concept_id,
         source_path=source_path,
@@ -80,6 +89,10 @@ def create_study_session(
         output_dir=output_dir,
         study_md_path=_study_md,
         session_id=session_id,
+    )
+    logger.info(
+        "session_create_done session=%s elapsed_ms=%.0f",
+        session_id, (time.monotonic() - t0) * 1000,
     )
 
     # 6. Bank auto-preparation

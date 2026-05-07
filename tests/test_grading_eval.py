@@ -403,6 +403,9 @@ class TestRunAllEvals:
         # Provide a fake API key so make_llm_client doesn't fail at creation
         # (the actual LLM calls won't happen in this test — we just check skipped list)
         monkeypatch.setenv("OPENAI_API_KEY", "sk-fake-key-for-test")
+        # Prevent _load_dotenv from poisoning os.environ with .env values
+        # (e.g., GONGHAEBUN_LLM_DISABLED=0 would leak to subsequent tests)
+        no_dotenv = tmp_path / "nonexistent.env"
         # We expect the eval to fail when trying to call OpenAI, so catch any error
         try:
             _, skipped = run_all_evals(
@@ -410,6 +413,7 @@ class TestRunAllEvals:
                 grader="llm",
                 model="gpt-5.4-mini",
                 tmp_dir=tmp_path,
+                env_path=no_dotenv,
             )
             assert EXPECTED_FAILURE_ID in skipped
         except Exception:

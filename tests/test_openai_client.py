@@ -133,6 +133,16 @@ class TestOpenAIClientInit:
         client = OpenAIClient(api_key="sk-test", model="gpt-4o")
         assert client._model == "gpt-4o"
 
+    def test_sdk_max_retries_is_zero(self, monkeypatch):
+        monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
+        from gonghaebun.llm.openai_client import OpenAIClient
+
+        OpenAIClient(api_key="sk-test")
+        fake = sys.modules["openai"]
+        call_kwargs = fake.OpenAI.call_args
+        kwargs = call_kwargs.kwargs if call_kwargs.kwargs else call_kwargs[1]
+        assert kwargs.get("max_retries") == 0
+
 
 # ---------------------------------------------------------------------------
 # TestOpenAIClientComplete

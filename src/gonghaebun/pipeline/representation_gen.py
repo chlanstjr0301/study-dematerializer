@@ -10,12 +10,16 @@ Returns a RepresentationSet.
 from __future__ import annotations
 
 import json
+import logging
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 
 from gonghaebun.llm.base import LLMClient
 from gonghaebun.models.representations import Representation, RepresentationSet
 from gonghaebun.prompts import load_prompt
+
+logger = logging.getLogger("gonghaebun.pipeline.representation_gen")
 
 _STAGE3_KEYS = {
     "formal": "stage3_formal",
@@ -40,6 +44,8 @@ def generate_representations(
     reps: dict[str, Representation] = {}
 
     for rep_type, stage_key in _STAGE3_KEYS.items():
+        logger.info("rep_gen_start rep_type=%s concept=%s", rep_type, concept_id)
+        _t0 = time.monotonic()
         prompt_template = load_prompt(stage_key)
         user = (
             f"{prompt_template}\n\n"
@@ -49,6 +55,10 @@ def generate_representations(
             f"__fixture__:{concept_id}/representations"
         )
         raw = llm.complete(system, user)
+        logger.info(
+            "rep_gen_done rep_type=%s elapsed_ms=%.0f",
+            rep_type, (time.monotonic() - _t0) * 1000,
+        )
 
         # MockLLMClient returns full JSON; parse and extract this rep_type
         try:
