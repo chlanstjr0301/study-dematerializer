@@ -36,6 +36,8 @@ def create_study_session(req: CreateStudySessionRequest):
             concept_id=req.concept_id,
             source_relative_path=req.source_relative_path,
         )
+    except svc.UnsupportedConceptError as e:
+        raise HTTPException(status_code=422, detail=str(e))
     except ConceptNotFoundError:
         raise HTTPException(status_code=422, detail=f"지원하지 않는 개념입니다: {req.concept_id}")
     except ValueError as e:

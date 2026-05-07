@@ -165,6 +165,8 @@ export default function StudySession() {
       const msg = e instanceof Error ? e.message : String(e);
       if (msg.includes('422') && msg.includes('소스 파일')) {
         setError('소스 파일을 먼저 업로드하세요.');
+      } else if (msg.includes('422') && msg.includes('선행개념 독립 세션 미지원')) {
+        setError('__unsupported_prerequisite__');
       } else if (msg.includes('422')) {
         setError('지원하지 않는 개념입니다.');
       } else {
@@ -330,6 +332,30 @@ export default function StudySession() {
         <div className="section">
           <div className="card">
             <p style={{ color: '#64748b' }}>학습 세션을 준비하고 있습니다...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error === '__unsupported_prerequisite__') {
+    return (
+      <div>
+        <h1 style={{ marginBottom: 8 }}>학습 세션: {concept}</h1>
+        <div className="section">
+          <div className="card" style={{ borderColor: '#f59e0b' }}>
+            <p style={{ color: '#92400e', marginBottom: 12, fontWeight: 500 }}>
+              이 선행개념은 아직 독립 학습 세션으로 제공되지 않습니다.
+            </p>
+            <p style={{ color: '#78716c', fontSize: 14, marginBottom: 16 }}>
+              현재는 옹골성 세션 안에서 선행개념으로만 확인할 수 있습니다.
+            </p>
+            <Link to="/study/compactness" className="submit-btn" style={{ textDecoration: 'none', marginRight: 8 }}>
+              옹골성 세션으로 돌아가기
+            </Link>
+            <Link to="/" className="submit-btn" style={{ textDecoration: 'none', background: '#64748b' }}>
+              홈으로
+            </Link>
           </div>
         </div>
       </div>

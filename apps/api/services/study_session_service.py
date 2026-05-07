@@ -22,6 +22,15 @@ ADVANCEABLE_STEPS = ["prerequisites", "representations", "mapping", "misconcepti
 VALID_REPRESENTATION_TYPES = {"formal", "intuitive", "visual", "counterexample", "proof_schema"}
 REQUIRED_SELF_EXPLANATIONS = {"formal", "proof_schema"}
 
+# Concepts that have full pipeline artifacts (fixtures, rubrics, representation cards).
+# Prerequisite stubs (open_set, metric_space, etc.) are NOT supported for independent sessions.
+SUPPORTED_STUDY_SESSION_CONCEPTS: set[str] = {"compactness", "connectedness", "uniform_continuity"}
+
+
+class UnsupportedConceptError(Exception):
+    """Raised when a concept exists in the knowledge base but lacks full study session support."""
+    pass
+
 _ALLOWED_SOURCE_EXTS = {".md", ".txt"}
 
 logger = logging.getLogger("gonghaebun.api.study_session")
@@ -203,7 +212,13 @@ def create_study_session(
     except ConceptNotFoundError:
         raise ConceptNotFoundError(concept_id)
 
-    # 3. Resolve source file (fallback to synthetic source if none uploaded)
+    # 3. Guard: only supported concepts can start full study sessions
+    if concept_id not in SUPPORTED_STUDY_SESSION_CONCEPTS:
+        raise UnsupportedConceptError(
+            f"선행개념 독립 세션 미지원: {concept_id}"
+        )
+
+    # 4. Resolve source file (fallback to synthetic source if none uploaded)
     try:
         source_path = _resolve_source(source_relative_path, _data_root, _sources_dir)
     except ValueError:

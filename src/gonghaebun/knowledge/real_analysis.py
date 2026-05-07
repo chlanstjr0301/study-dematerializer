@@ -114,6 +114,12 @@ PREREQUISITE_EDGES: dict[str, list[str]] = {
 }
 
 # ---------------------------------------------------------------------------
+# Concepts that support full independent study sessions (have pipeline artifacts)
+# ---------------------------------------------------------------------------
+
+SUPPORTED_STUDY_SESSION_CONCEPTS: set[str] = {"compactness", "connectedness", "uniform_continuity"}
+
+# ---------------------------------------------------------------------------
 # Keyword lists for Stage 0 source extraction
 # ---------------------------------------------------------------------------
 
