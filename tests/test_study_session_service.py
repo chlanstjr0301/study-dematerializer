@@ -47,6 +47,18 @@ def study_env(tmp_path: Path, monkeypatch):
     }
 
 
+def _write_fake_mapping_results(session_dir: Path) -> None:
+    """Write fake mapping results matching all tasks in mapping_tasks.json."""
+    tasks_path = session_dir / "mapping_tasks.json"
+    if not tasks_path.exists():
+        return
+    tasks = json.loads(tasks_path.read_text(encoding="utf-8"))
+    results = [{"task_id": t["task_id"], "passed": True, "score": 0.5} for t in tasks]
+    (session_dir / "mapping_results.json").write_text(
+        json.dumps(results, ensure_ascii=False), encoding="utf-8"
+    )
+
+
 # ---------------------------------------------------------------------------
 # TestResolveSource
 # ---------------------------------------------------------------------------
@@ -126,7 +138,7 @@ class TestCreateSession:
         assert state["session_id"] == result["session_id"]
         assert state["concept_id"] == "compactness"
         assert state["current_step"] == 1
-        assert state["steps"] == ["diagnose", "prerequisites", "representations", "misconceptions", "recall", "summary"]
+        assert state["steps"] == ["diagnose", "prerequisites", "representations", "mapping", "misconceptions", "recall", "summary"]
         assert state["steps_completed"] == []
         assert state["diagnosis"] is None
         assert state["recall_completed"] is False
@@ -243,9 +255,12 @@ class TestAdvance:
         sid = self._create_and_diagnose(study_env)
         advance_step(sid, "prerequisites")
         advance_step(sid, "representations")
+        # Write fake mapping results so mapping advance check passes
+        _write_fake_mapping_results(study_env["runs_dir"] / sid)
+        advance_step(sid, "mapping")
         advance_step(sid, "misconceptions")
         advance_step(sid, "recall")
-        # Now at step 6 (summary) — "summary" is not advanceable
+        # Now at step 7 (summary) — "summary" is not advanceable
         with pytest.raises(ValueError, match="유효하지 않은 단계입니다"):
             advance_step(sid, "summary")
 

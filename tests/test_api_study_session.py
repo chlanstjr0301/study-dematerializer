@@ -58,6 +58,18 @@ def _create_session(study_env) -> dict:
     return resp.json()
 
 
+def _submit_all_mapping_tasks(session_id: str) -> None:
+    """Submit all 3 mapping tasks with minimal responses."""
+    tasks_resp = client.get(f"/api/study-session/{session_id}/mapping-tasks")
+    assert tasks_resp.status_code == 200
+    for task in tasks_resp.json()["tasks"]:
+        resp = client.post(f"/api/study-session/{session_id}/mapping-submit", json={
+            "task_id": task["task_id"],
+            "learner_response": "테스트 응답입니다.",
+        })
+        assert resp.status_code == 200
+
+
 # ---------------------------------------------------------------------------
 # TestCreateStudySession
 # ---------------------------------------------------------------------------
@@ -87,7 +99,7 @@ class TestCreateStudySession:
         assert data["concept_id"] == "compactness"
         assert data["canonical_name_ko"] == "옹골성"
         assert data["current_step"] == 1
-        assert data["steps"] == ["diagnose", "prerequisites", "representations", "misconceptions", "recall", "summary"]
+        assert data["steps"] == ["diagnose", "prerequisites", "representations", "mapping", "misconceptions", "recall", "summary"]
 
     def test_session_dir_contains_pipeline_artifacts(self, study_env):
         data = _create_session(study_env)
@@ -144,7 +156,7 @@ class TestGetStudySession:
         assert state["session_id"] == data["session_id"]
         assert state["concept_id"] == "compactness"
         assert state["current_step"] == 1
-        assert state["steps"] == ["diagnose", "prerequisites", "representations", "misconceptions", "recall", "summary"]
+        assert state["steps"] == ["diagnose", "prerequisites", "representations", "mapping", "misconceptions", "recall", "summary"]
         assert state["steps_completed"] == []
         assert state["diagnosis"] is None
         assert state["self_explanations"] is None
@@ -281,8 +293,19 @@ class TestAdvanceStep:
         for step, expected_next in [
             ("prerequisites", 3),
             ("representations", 4),
-            ("misconceptions", 5),
-            ("recall", 6),
+        ]:
+            resp = client.post(f"/api/study-session/{sid}/advance", json={
+                "completed_step": step,
+            })
+            assert resp.status_code == 200
+            assert resp.json()["current_step"] == expected_next
+
+        # Mapping step requires all tasks to be submitted
+        _submit_all_mapping_tasks(sid)
+        for step, expected_next in [
+            ("mapping", 5),
+            ("misconceptions", 6),
+            ("recall", 7),
         ]:
             resp = client.post(f"/api/study-session/{sid}/advance", json={
                 "completed_step": step,
@@ -326,10 +349,14 @@ class TestAdvanceStep:
 
     def test_returns_400_at_final_step(self, study_env):
         sid = self._create_and_diagnose(study_env)
-        # Advance through all steps
-        for step in ["prerequisites", "representations", "misconceptions", "recall"]:
+        # Advance through steps before mapping
+        for step in ["prerequisites", "representations"]:
             client.post(f"/api/study-session/{sid}/advance", json={"completed_step": step})
-        # Now at summary (step 6) — try invalid advance
+        # Submit mapping tasks, then advance through remaining steps
+        _submit_all_mapping_tasks(sid)
+        for step in ["mapping", "misconceptions", "recall"]:
+            client.post(f"/api/study-session/{sid}/advance", json={"completed_step": step})
+        # Now at summary (step 7) — try invalid advance
         resp = client.post(f"/api/study-session/{sid}/advance", json={
             "completed_step": "recall",
         })

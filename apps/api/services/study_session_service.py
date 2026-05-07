@@ -16,8 +16,8 @@ from apps.api.services.bank_service import safe_resolve_under
 from apps.api.services.compiler_analyzer_service import GAP_CUES, KOREAN_NAMES
 from apps.api.services.path_utils import validate_slug
 
-STEPS = ["diagnose", "prerequisites", "representations", "misconceptions", "recall", "summary"]
-ADVANCEABLE_STEPS = ["prerequisites", "representations", "misconceptions", "recall"]
+STEPS = ["diagnose", "prerequisites", "representations", "mapping", "misconceptions", "recall", "summary"]
+ADVANCEABLE_STEPS = ["prerequisites", "representations", "mapping", "misconceptions", "recall"]
 VALID_REPRESENTATION_TYPES = {"formal", "intuitive", "visual", "counterexample", "proof_schema"}
 REQUIRED_SELF_EXPLANATIONS = {"formal", "proof_schema"}
 
@@ -333,6 +333,9 @@ def advance_step(session_id: str, completed_step: str, runs_dir: Path | None = N
     _runs_dir = runs_dir or config.RUNS_DIR
     state = get_study_session(session_id, _runs_dir)
 
+    # Use session's own steps list for backward compatibility with legacy 6-step sessions
+    session_steps = state.get("steps", list(STEPS))
+
     # Special handling for "diagnose"
     if completed_step == "diagnose":
         if "diagnose" in state["steps_completed"]:
@@ -345,13 +348,17 @@ def advance_step(session_id: str, completed_step: str, runs_dir: Path | None = N
         raise ValueError(f"유효하지 않은 단계입니다: {completed_step}")
 
     # Check if at final step
-    if state["current_step"] >= len(STEPS):
+    if state["current_step"] >= len(session_steps):
         raise ValueError("더 이상 진행할 단계가 없습니다")
 
     # Check step order
-    expected = STEPS[state["current_step"] - 1]
+    expected = session_steps[state["current_step"] - 1]
     if completed_step != expected:
         raise ValueError(f"이전 단계를 먼저 완료해야 합니다: {expected}")
+
+    # Mapping step completion check
+    if completed_step == "mapping" and state.get("confusion_map_initialized"):
+        _check_mapping_completion(_runs_dir / session_id)
 
     # Advance
     if completed_step not in state["steps_completed"]:
@@ -361,7 +368,7 @@ def advance_step(session_id: str, completed_step: str, runs_dir: Path | None = N
 
     _write_state(_runs_dir / session_id, state)
 
-    current_step_name = STEPS[state["current_step"] - 1] if state["current_step"] <= len(STEPS) else "done"
+    current_step_name = session_steps[state["current_step"] - 1] if state["current_step"] <= len(session_steps) else "done"
 
     return {
         "current_step": state["current_step"],
@@ -768,6 +775,33 @@ def _extract_misconceptions(diagnosis_data: dict) -> list[dict]:
             "is_correct": m.get("is_correct", False),
         })
     return result
+
+
+def _check_mapping_completion(session_dir: Path) -> None:
+    """Verify all mapping tasks have been submitted.
+
+    Raises ValueError if tasks exist but not all have results.
+    Silently passes if no mapping_tasks.json exists.
+    """
+    tasks_path = session_dir / "mapping_tasks.json"
+    if not tasks_path.exists():
+        return  # No mapping tasks generated — skip check
+
+    tasks = json.loads(tasks_path.read_text(encoding="utf-8"))
+    if not tasks:
+        return  # Empty tasks list
+
+    results_path = session_dir / "mapping_results.json"
+    results: list[dict] = []
+    if results_path.exists():
+        results = json.loads(results_path.read_text(encoding="utf-8"))
+
+    submitted_ids = {r["task_id"] for r in results}
+    task_ids = {t["task_id"] for t in tasks}
+    missing = task_ids - submitted_ids
+
+    if missing:
+        raise ValueError(f"모든 매핑 과제를 제출해야 합니다. 미제출: {len(missing)}개")
 
 
 def _write_state(session_dir: Path, state: dict) -> None:

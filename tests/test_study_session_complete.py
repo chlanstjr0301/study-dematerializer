@@ -67,9 +67,28 @@ def _diagnose(session_id: str) -> None:
     assert resp.status_code == 200
 
 
+def _submit_all_mapping_tasks(session_id: str) -> None:
+    """Submit all 3 mapping tasks with minimal responses."""
+    tasks_resp = client.get(f"/api/study-session/{session_id}/mapping-tasks")
+    assert tasks_resp.status_code == 200
+    for task in tasks_resp.json()["tasks"]:
+        resp = client.post(f"/api/study-session/{session_id}/mapping-submit", json={
+            "task_id": task["task_id"],
+            "learner_response": "테스트 응답입니다.",
+        })
+        assert resp.status_code == 200
+
+
 def _advance_to_recall(session_id: str) -> None:
-    """Advance through prerequisites → representations → misconceptions to reach recall step."""
-    for step in ["prerequisites", "representations", "misconceptions"]:
+    """Advance through prerequisites → representations → mapping → misconceptions to reach recall step."""
+    for step in ["prerequisites", "representations"]:
+        resp = client.post(f"/api/study-session/{session_id}/advance", json={
+            "completed_step": step,
+        })
+        assert resp.status_code == 200
+    # Submit mapping tasks before advancing from mapping
+    _submit_all_mapping_tasks(session_id)
+    for step in ["mapping", "misconceptions"]:
         resp = client.post(f"/api/study-session/{session_id}/advance", json={
             "completed_step": step,
         })
