@@ -26,6 +26,9 @@ import type {
   StudyValidationReport,
   AnalyzeRequest,
   AnalyzeResponse,
+  MappingTasksResponse,
+  MappingSubmitResult,
+  ConfusionMapData,
   CreateStudySessionRequest,
   CreateStudySessionResponse,
   DiagnoseRequest,
@@ -199,3 +202,23 @@ export const submitRecall = (sessionId: string, req: RecallSubmitRequest): Promi
 
 export const completeStudySession = (sessionId: string): Promise<CompleteStudySessionResponse> =>
   post(`/study-session/${sessionId}/complete`, {});
+
+// ---------------------------------------------------------------------------
+// MVP6: Mapping Tasks + Confusion Map
+// ---------------------------------------------------------------------------
+
+export const getMappingTasks = (sessionId: string): Promise<MappingTasksResponse> =>
+  get(`/study-session/${sessionId}/mapping-tasks`);
+
+export const submitMapping = (
+  sessionId: string,
+  taskId: string,
+  learnerResponse: string,
+): Promise<MappingSubmitResult> =>
+  post(`/study-session/${sessionId}/mapping-submit`, {
+    task_id: taskId,
+    learner_response: learnerResponse,
+  });
+
+export const getConfusionMap = (sessionId: string): Promise<ConfusionMapData> =>
+  get(`/study-session/${sessionId}/confusion-map`);

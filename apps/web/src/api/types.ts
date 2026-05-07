@@ -295,6 +295,69 @@ export interface AnalyzeResponse {
 }
 
 // ---------------------------------------------------------------------------
+// MVP6: Mapping Tasks + Confusion Map
+// ---------------------------------------------------------------------------
+
+export interface MappingTaskItem {
+  task_id: string;
+  task_type: string;
+  prompt: string;
+  source_representations: string[];
+  target_representation: string;
+}
+
+export interface MappingTasksResponse {
+  session_id: string;
+  concept_id: string;
+  tasks: MappingTaskItem[];
+}
+
+export interface MappingSubmitResult {
+  task_id: string;
+  task_type: string;
+  score: number;
+  passed: boolean;
+  missing_elements: string[];
+  misconception_tags: string[];
+  mapping_failures: string[];
+  feedback: string;
+  next_recall_trigger: string;
+  confusion_map: ConfusionMapData;
+}
+
+export interface PrerequisiteNodeItem {
+  concept_id: string;
+  mastery: string;
+  self_reported: string | null;
+}
+
+export interface MappingEdgeItem {
+  from_rep: string;
+  to_rep: string;
+  task_type: string;
+  passed: boolean;
+  score: number;
+}
+
+export interface EvidenceSnippetItem {
+  step: string;
+  task_type: string | null;
+  learner_text: string;
+  issue: string;
+}
+
+export interface ConfusionMapData {
+  concept_id: string;
+  session_id: string;
+  prerequisite_nodes: PrerequisiteNodeItem[];
+  mapping_edges: MappingEdgeItem[];
+  misconception_tags: string[];
+  next_recall_triggers: string[];
+  evidence_snippets: EvidenceSnippetItem[];
+  last_updated_step: string;
+}
+
+// ---------------------------------------------------------------------------
 // MVP5-3: Study Session
 // ---------------------------------------------------------------------------
 
