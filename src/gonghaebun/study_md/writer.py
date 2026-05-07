@@ -215,6 +215,33 @@ def _write_study_md(path: Path, records: dict[str, ConceptRecord]) -> None:
             check = "x" if misc.confirmed else " "
             lines.append(f"- [{check}] {misc.claim}")
 
+        # Confusion Summary (optional — only written when data exists)
+        has_confusion = (
+            record.confusion_mapping_status
+            or record.active_misconceptions
+            or record.next_recall_trigger
+        )
+        if has_confusion:
+            lines += [
+                "",
+                "### Confusion Summary",
+                "",
+            ]
+            if record.confusion_mapping_status:
+                lines += [
+                    "| mapping | status | last_session |",
+                    "|---------|--------|-------------|",
+                ]
+                for cms in record.confusion_mapping_status:
+                    lines.append(
+                        f"| {cms.mapping} | {cms.status} | {cms.last_session} |"
+                    )
+                lines.append("")
+            misconceptions_str = ", ".join(record.active_misconceptions) if record.active_misconceptions else "—"
+            lines.append(f"**Active misconceptions**: {misconceptions_str}")
+            trigger_str = record.next_recall_trigger or "—"
+            lines.append(f"**Next recall trigger**: {trigger_str}")
+
         if record.notes:
             lines += ["", "### Notes", "", f"> {record.notes}"]
 

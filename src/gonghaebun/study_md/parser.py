@@ -61,6 +61,13 @@ class MisconceptionRecord:
 
 
 @dataclass
+class ConfusionMappingStatus:
+    mapping: str           # e.g. "formal → counterexample"
+    status: str            # "passed" or "failed"
+    last_session: str      # ISO date
+
+
+@dataclass
 class ConceptRecord:
     concept_id: str
     domain: str = "real_analysis"
@@ -70,6 +77,9 @@ class ConceptRecord:
     prerequisites: list[PrerequisiteRecord] = field(default_factory=list)
     misconceptions: list[MisconceptionRecord] = field(default_factory=list)
     notes: str = ""
+    confusion_mapping_status: list[ConfusionMappingStatus] = field(default_factory=list)
+    active_misconceptions: list[str] = field(default_factory=list)
+    next_recall_trigger: Optional[str] = None
 
 
 def parse_study_md(path: Path) -> dict[str, ConceptRecord]:
@@ -145,6 +155,11 @@ def _parse_section(concept_id: str, text: str) -> ConceptRecord:
     if misc_section:
         record.misconceptions = _parse_misconceptions(misc_section)
 
+    # Confusion Summary
+    confusion_section = _extract_subsection(text, "Confusion Summary")
+    if confusion_section:
+        _parse_confusion_summary(record, confusion_section)
+
     # Notes
     notes_section = _extract_subsection(text, "Notes")
     if notes_section:
@@ -183,3 +198,31 @@ def _parse_misconceptions(text: str) -> list[MisconceptionRecord]:
             rest = m.group(2)
             result.append(MisconceptionRecord(claim=rest, confirmed=confirmed))
     return result
+
+
+def _parse_confusion_summary(record: ConceptRecord, text: str) -> None:
+    """Parse the Confusion Summary subsection into ConceptRecord fields."""
+    # Mapping status table
+    rows = _parse_table(text, ["mapping", "status", "last_session"])
+    record.confusion_mapping_status = [
+        ConfusionMappingStatus(
+            mapping=r["mapping"],
+            status=r["status"],
+            last_session=r["last_session"],
+        )
+        for r in rows
+    ]
+
+    # Active misconceptions line
+    m = re.search(r'\*\*Active misconceptions\*\*:\s*(.+)', text)
+    if m:
+        raw = m.group(1).strip()
+        if raw and raw != "—":
+            record.active_misconceptions = [t.strip() for t in raw.split(",") if t.strip()]
+
+    # Next recall trigger line
+    m = re.search(r'\*\*Next recall trigger\*\*:\s*(.+)', text)
+    if m:
+        raw = m.group(1).strip()
+        if raw and raw != "—":
+            record.next_recall_trigger = raw
