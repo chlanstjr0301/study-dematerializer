@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { getBank } from '../../api/client';
 import type { QuestionItem, RecallSubmitResponse } from '../../api/types';
+import RichMathText from '../common/RichMathText';
+import GraderProvenance from '../common/GraderProvenance';
 
 interface WhiteRecallStepProps {
   conceptId: string;
@@ -76,7 +78,7 @@ export default function WhiteRecallStep({
                   [{QUESTION_TYPE_LABELS[q.question_type] ?? q.question_type}]
                 </span>
                 <span style={{ fontSize: 14, color: '#1e293b' }}>
-                  {i + 1}. {q.question}
+                  {i + 1}. <RichMathText className="rich-math-text" inline>{q.question}</RichMathText>
                 </span>
               </div>
             ))}
@@ -132,16 +134,16 @@ export default function WhiteRecallStep({
             </span>
           </div>
           {recallResult.feedback && (
-            <p style={{ fontSize: 13, color: '#374151', marginBottom: 8 }}>
-              {recallResult.feedback}
-            </p>
+            <div style={{ fontSize: 13, color: '#374151', marginBottom: 8 }}>
+              <RichMathText className="rich-math-text">{recallResult.feedback}</RichMathText>
+            </div>
           )}
           {recallResult.missing_elements.length > 0 && (
             <div style={{ fontSize: 12, color: '#92400e', marginTop: 4 }}>
               <span style={{ fontWeight: 500 }}>누락된 내용:</span>
               <ul style={{ margin: '4px 0 0 16px', padding: 0 }}>
                 {recallResult.missing_elements.map((el, i) => (
-                  <li key={i}>{el}</li>
+                  <li key={i}><RichMathText className="rich-math-text" inline>{el}</RichMathText></li>
                 ))}
               </ul>
             </div>
@@ -151,11 +153,12 @@ export default function WhiteRecallStep({
               <span style={{ fontWeight: 500 }}>오류:</span>
               <ul style={{ margin: '4px 0 0 16px', padding: 0 }}>
                 {recallResult.errors.map((el, i) => (
-                  <li key={i}>{el}</li>
+                  <li key={i}><RichMathText className="rich-math-text" inline>{el}</RichMathText></li>
                 ))}
               </ul>
             </div>
           )}
+          <GraderProvenance graderSource={recallResult.grader_source} />
         </div>
       )}
 

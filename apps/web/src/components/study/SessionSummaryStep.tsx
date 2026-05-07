@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import type { CompleteStudySessionResponse, ConfusionMapData } from '../../api/types';
+import RichMathText from '../common/RichMathText';
 
 interface SessionSummaryStepProps {
   conceptId: string;
@@ -123,9 +124,9 @@ export default function SessionSummaryStep({
         <p style={{ fontWeight: 600, color: '#15803d', marginBottom: 8 }}>
           학습 세션을 완료했습니다!
         </p>
-        <p style={{ fontSize: 14, color: '#166534' }}>
-          {completionResult.completion_summary}
-        </p>
+        <div style={{ fontSize: 14, color: '#166534' }}>
+          <RichMathText className="rich-math-text">{completionResult.completion_summary}</RichMathText>
+        </div>
         <p style={{ fontSize: 13, color: '#166534', marginTop: 4 }}>
           완료한 단계: {stepsCompleted.length}/{TOTAL_STEPS}
         </p>

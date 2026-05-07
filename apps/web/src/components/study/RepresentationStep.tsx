@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import type { SelfExplainResponse } from '../../api/types';
+import RichMathText from '../common/RichMathText';
+import GraderProvenance from '../common/GraderProvenance';
 
 interface RepresentationStepProps {
   representations: Record<string, string>;
@@ -104,9 +106,9 @@ export default function RepresentationStep({
             {viewedReps.size}/{repEntries.length} 확인
           </span>
         </div>
-        <div style={{ fontSize: 15, lineHeight: 1.7, color: '#1e293b', whiteSpace: 'pre-wrap' }}>
+        <RichMathText className="rich-math-text" >
           {rep.content}
-        </div>
+        </RichMathText>
       </div>
 
       {/* Self-explanation textarea */}
@@ -156,16 +158,16 @@ export default function RepresentationStep({
             </span>
           </div>
           {currentResult.feedback && (
-            <p style={{ fontSize: 13, color: '#374151', marginBottom: 6 }}>
-              {currentResult.feedback}
-            </p>
+            <div style={{ fontSize: 13, color: '#374151', marginBottom: 6 }}>
+              <RichMathText className="rich-math-text">{currentResult.feedback}</RichMathText>
+            </div>
           )}
           {currentResult.missing_elements.length > 0 && (
             <div style={{ fontSize: 12, color: '#92400e', marginTop: 4 }}>
               <span style={{ fontWeight: 500 }}>부족한 부분:</span>
               <ul style={{ margin: '4px 0 0 16px', padding: 0 }}>
                 {currentResult.missing_elements.map((el, i) => (
-                  <li key={i}>{el}</li>
+                  <li key={i}><RichMathText className="rich-math-text" inline>{el}</RichMathText></li>
                 ))}
               </ul>
             </div>
@@ -175,11 +177,12 @@ export default function RepresentationStep({
               <span style={{ fontWeight: 500 }}>오류:</span>
               <ul style={{ margin: '4px 0 0 16px', padding: 0 }}>
                 {currentResult.errors.map((el, i) => (
-                  <li key={i}>{el}</li>
+                  <li key={i}><RichMathText className="rich-math-text" inline>{el}</RichMathText></li>
                 ))}
               </ul>
             </div>
           )}
+          <GraderProvenance graderSource={currentResult.grader_source} />
         </div>
       )}
 

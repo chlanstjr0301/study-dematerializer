@@ -4,6 +4,7 @@ import type {
   MappingSubmitResult,
   ConfusionMapData,
 } from '../../api/types';
+import RichMathText from '../common/RichMathText';
 
 interface MappingCheckStepProps {
   sessionId: string;
@@ -83,7 +84,7 @@ export default function MappingCheckStep({
               <div style={{ fontSize: 13, color: '#888', marginBottom: 4 }}>
                 과제 {i + 1}/{tasks.length}: {TASK_TYPE_LABELS[task.task_type] ?? task.task_type}
               </div>
-              <p style={{ fontSize: 14, marginBottom: 8 }}>{task.prompt}</p>
+              <div style={{ fontSize: 14, marginBottom: 8 }}><RichMathText className="rich-math-text">{task.prompt}</RichMathText></div>
               {result && <ResultFeedback result={result} />}
               {!result && (
                 <p style={{ fontSize: 13, color: '#94a3b8', fontStyle: 'italic' }}>미제출</p>
@@ -140,9 +141,9 @@ export default function MappingCheckStep({
         <div style={{ fontSize: 12, color: '#aaa', marginBottom: 8 }}>
           {currentTask.source_representations.join(', ')} → {currentTask.target_representation}
         </div>
-        <p style={{ fontSize: 14, color: '#1e293b', marginBottom: 12 }}>
-          {currentTask.prompt}
-        </p>
+        <div style={{ fontSize: 14, color: '#1e293b', marginBottom: 12 }}>
+          <RichMathText className="rich-math-text">{currentTask.prompt}</RichMathText>
+        </div>
 
         {/* Textarea — only if not yet submitted */}
         {!currentResult && (
@@ -249,9 +250,9 @@ function ResultFeedback({ result }: { result: MappingSubmitResult }) {
       </div>
 
       {result.feedback && (
-        <p style={{ fontSize: 13, color: '#374151', marginBottom: 6 }}>
-          {result.feedback}
-        </p>
+        <div style={{ fontSize: 13, color: '#374151', marginBottom: 6 }}>
+          <RichMathText className="rich-math-text">{result.feedback}</RichMathText>
+        </div>
       )}
 
       {result.missing_elements.length > 0 && (
