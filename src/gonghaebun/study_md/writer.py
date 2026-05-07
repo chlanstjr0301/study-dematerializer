@@ -250,6 +250,57 @@ def _write_study_md(path: Path, records: dict[str, ConceptRecord]) -> None:
     path.write_text("\n".join(lines), encoding="utf-8")
 
 
+def apply_confusion_summary(
+    study_md_path: Path,
+    concept_id: str,
+    confusion_map_data: dict,
+) -> None:
+    """Merge confusion map data into the STUDY.md Confusion Summary section.
+
+    confusion_map_data should have:
+      - mapping_edges: list[{task_type, passed, score}]
+      - misconception_tags: list[str]
+      - next_recall_triggers: list[str]
+    """
+    from gonghaebun.study_md.parser import ConfusionMappingStatus
+
+    records = parse_study_md(study_md_path)
+    if concept_id not in records:
+        return  # Nothing to update
+
+    record = records[concept_id]
+    today = date.today().isoformat()
+
+    # Mapping edge labels
+    _EDGE_LABELS = {
+        "formal_to_counterexample": "formal → counterexample",
+        "counterexample_to_formal": "counterexample → formal",
+        "formal_counterexample_to_proof_schema": "formal+CE → proof_schema",
+    }
+
+    edges = confusion_map_data.get("mapping_edges", [])
+    if edges:
+        record.confusion_mapping_status = [
+            ConfusionMappingStatus(
+                mapping=_EDGE_LABELS.get(e.get("task_type", ""), e.get("task_type", "")),
+                status="passed" if e.get("passed") else "failed",
+                last_session=today,
+            )
+            for e in edges
+        ]
+
+    tags = confusion_map_data.get("misconception_tags", [])
+    if tags:
+        record.active_misconceptions = list(tags)
+
+    triggers = confusion_map_data.get("next_recall_triggers", [])
+    if triggers:
+        record.next_recall_trigger = triggers[0]
+
+    _write_study_md(study_md_path, records)
+    validate_study_md(study_md_path)
+
+
 def apply_concept_compiler_patch(
     study_md_path: Path,
     concept_id: str,

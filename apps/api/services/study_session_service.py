@@ -656,13 +656,20 @@ def complete_session(
     except Exception as e:
         raise StudyMdUpdateError(f"STUDY.md 업데이트에 실패했습니다: {e}") from e
 
-    # Persist final confusion map snapshot
+    # Persist final confusion map snapshot + merge into STUDY.md
     try:
         from apps.api.services.confusion_map_service import load_confusion_map, persist_confusion_map
         cmap = load_confusion_map(session_dir)
         if cmap is not None:
             cmap.last_updated_step = "complete"
             persist_confusion_map(cmap, session_dir)
+            # Merge confusion summary into STUDY.md
+            from gonghaebun.study_md.writer import apply_confusion_summary
+            apply_confusion_summary(
+                _study_md,
+                concept_id,
+                cmap.model_dump(),
+            )
     except Exception:
         logger.debug("confusion_map_final_persist_skipped session=%s", session_id)
 
