@@ -785,3 +785,157 @@ h4 { font-size: 14px; margin-bottom: 8px; color: #555; }
   color: #8899bb;
   font-size: 13px;
 }
+
+/* -------------------------------------------------------------------------
+   MVP6: Confusion Map Panel
+   --------------------------------------------------------------------- */
+
+.cmap-panel {
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 16px;
+  font-size: 13px;
+}
+
+.cmap-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #1a1a2e;
+  margin-bottom: 4px;
+}
+
+.cmap-updated {
+  font-size: 11px;
+  color: #999;
+  margin-bottom: 14px;
+}
+
+.cmap-empty {
+  color: #888;
+  font-style: italic;
+  font-size: 13px;
+  padding: 8px 0;
+}
+
+.cmap-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 8px 0;
+}
+
+.cmap-skeleton-bar {
+  height: 14px;
+  background: #e5e7eb;
+  border-radius: 4px;
+  animation: cmap-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes cmap-pulse {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+
+.cmap-section {
+  margin-bottom: 14px;
+}
+
+.cmap-section-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #666;
+  text-transform: none;
+  margin-bottom: 6px;
+  border-bottom: 1px solid #f0f0f0;
+  padding-bottom: 3px;
+}
+
+.cmap-prereq-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 0;
+  font-size: 13px;
+}
+
+.cmap-prereq-id {
+  font-weight: 500;
+  color: #333;
+}
+
+.cmap-prereq-mastery {
+  color: #888;
+  font-size: 12px;
+}
+
+.cmap-prereq-self {
+  color: #aaa;
+  font-size: 11px;
+}
+
+.cmap-edge-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 0;
+  font-size: 13px;
+}
+
+.cmap-edge-score {
+  color: #888;
+  font-size: 12px;
+  margin-left: auto;
+}
+
+.cmap-misconception-tag {
+  color: #dc2626;
+  font-size: 13px;
+  padding: 1px 0;
+}
+
+.cmap-misconception-dot {
+  margin-right: 4px;
+}
+
+.cmap-trigger-row {
+  display: flex;
+  gap: 6px;
+  padding: 2px 0;
+  font-size: 13px;
+}
+
+.cmap-trigger-arrow {
+  color: #4a7aff;
+  flex-shrink: 0;
+}
+
+.cmap-trigger-text {
+  font-style: italic;
+  color: #444;
+}
+
+.cmap-evidence-item {
+  background: #f9fafb;
+  border-radius: 4px;
+  padding: 6px 8px;
+  margin-bottom: 6px;
+  font-size: 12px;
+}
+
+.cmap-evidence-step {
+  color: #888;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.cmap-evidence-text {
+  color: #555;
+  font-style: italic;
+}
+
+.cmap-evidence-issue {
+  color: #b91c1c;
+  font-size: 12px;
+  margin-top: 2px;
+}
