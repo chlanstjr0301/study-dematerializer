@@ -163,9 +163,12 @@ def validate_study_md_full(
                     ))
 
         # E004: overall_mastery drift (only check if overall_mastery is itself valid)
+        # Only scored reps (formal, counterexample, proof_schema) contribute to overall mastery.
         if record.overall_mastery in VALID_MASTERY and record.representations:
+            from gonghaebun.study_loop.mastery import MASTERY_SCORED_REPS
             valid_masteries = [
-                r.mastery for r in record.representations if r.mastery in VALID_MASTERY
+                r.mastery for r in record.representations
+                if r.mastery in VALID_MASTERY and r.type in MASTERY_SCORED_REPS
             ]
             if valid_masteries:
                 computed = _weakest_mastery(valid_masteries)

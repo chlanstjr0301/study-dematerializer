@@ -146,12 +146,13 @@ def _update_record(record: ConceptRecord, session: StudySession) -> None:
             last = today if rep_type in mastery_map else None
             record.representations.append(RepresentationRecord(rep_type, mastery, last))
 
-    # Recompute overall mastery (weakest link)
-    all_masteries = [r.mastery for r in record.representations]
-    if all_masteries:
-        if "unknown" in all_masteries:
+    # Recompute overall mastery (weakest of scored reps only)
+    from gonghaebun.study_loop.mastery import MASTERY_SCORED_REPS
+    scored_masteries = [r.mastery for r in record.representations if r.type in MASTERY_SCORED_REPS]
+    if scored_masteries:
+        if "unknown" in scored_masteries:
             record.overall_mastery = "unknown"
-        elif "partial" in all_masteries:
+        elif "partial" in scored_masteries:
             record.overall_mastery = "partial"
         else:
             record.overall_mastery = "solid"

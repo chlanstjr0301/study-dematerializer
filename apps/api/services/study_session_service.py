@@ -594,9 +594,10 @@ def complete_session(
             attempted_at=state.get("updated_at", ""),
         ))
 
-    # Compute overall mastery (weakest link including reps without self-explanation)
+    # Compute overall mastery (weakest of scored reps only: formal, counterexample, proof_schema)
+    from gonghaebun.study_loop.mastery import MASTERY_SCORED_REPS
     all_masteries = []
-    for rep_type in VALID_REPRESENTATION_TYPES:
+    for rep_type in MASTERY_SCORED_REPS:
         if rep_type in self_exps:
             all_masteries.append(compute_mastery_state(self_exps[rep_type]["accuracy_score"]))
         else:

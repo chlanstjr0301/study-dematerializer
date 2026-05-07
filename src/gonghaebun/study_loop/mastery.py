@@ -27,6 +27,10 @@ SELF_SCORE_TO_ACCURACY: dict[int, float] = {
     3: 1.0,
 }
 
+# Representations that contribute to overall mastery calculation (weakest-link).
+# intuitive and visual are useful for learning but do not gate mastery.
+MASTERY_SCORED_REPS: frozenset[str] = frozenset({"formal", "counterexample", "proof_schema"})
+
 QUESTION_TYPE_TO_REP: dict[str, str] = {
     "definition_recall":   "formal",
     "theorem_recall":      "formal",
