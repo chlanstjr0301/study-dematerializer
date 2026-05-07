@@ -1,0 +1,233 @@
+{
+  "concept_id": "compactness",
+  "domain": "real_analysis",
+  "source_refs": [
+    "Rudin, Principles of Mathematical Analysis, Ch.2 (Definitions 2.31-2.32, Theorems 2.33-2.41)",
+    "Bartle & Sherbert, Introduction to Real Analysis, Ch.11"
+  ],
+  "prerequisite_concepts": [
+    "metric_space",
+    "open_set",
+    "open_cover",
+    "heine_borel",
+    "sequential_compactness"
+  ],
+  "definition_card": {
+    "statement": "A subset K of a metric space X is compact if every open cover of K contains a finite subcover. That is, if {G_alpha} is a collection of open sets such that K ⊂ ∪ G_alpha, then there exist finitely many indices alpha_1, ..., alpha_n such that K ⊂ G_{alpha_1} ∪ ... ∪ G_{alpha_n}.",
+    "statement_kr": "거리 공간 X의 부분집합 K가 옹골(compact)이란, K의 모든 열린 덮개가 유한 부분덮개를 가지는 것이다. 즉, {G_alpha}가 K ⊂ ∪ G_alpha를 만족하는 열린 집합들의 모임이면, 유한 개의 인덱스 alpha_1, ..., alpha_n이 존재하여 K ⊂ G_{alpha_1} ∪ ... ∪ G_{alpha_n}이 성립한다.",
+    "source_ref": "Rudin, Definition 2.32",
+    "required_terms": [
+      "open cover",
+      "finite subcover",
+      "every",
+      "metric space"
+    ]
+  },
+  "intuitive_card": {
+    "explanation": "A compact set is one that is 'small enough' that you can always cover it with finitely many open sets, no matter how you try to cover it. Think of it as a set where nothing 'escapes to infinity' and there are no 'boundary holes' that prevent finite covering.",
+    "explanation_kr": "옹골 집합은 아무리 열린 집합들로 덮으려 해도 항상 유한 개만으로 덮을 수 있을 만큼 '충분히 작은' 집합이다. 무한으로 빠져나가는 것도 없고, 유한 덮개를 방해하는 '경계 구멍'도 없다고 생각할 수 있다.",
+    "analogies": [
+      "A finite net that always catches all fish, no matter how you cast it",
+      "A room small enough that a finite number of spotlights can illuminate every corner",
+      "You cannot 'escape' a compact set by taking limits — all limit points are captured"
+    ]
+  },
+  "visual_card": {
+    "description": "Visualize [0,1] as a solid line segment. Any collection of overlapping open intervals covering it can be reduced to finitely many. Contrast with (0,1): the cover {(1/n, 1) : n=1,2,...} has no finite subcover because points near 0 always need one more interval.",
+    "description_kr": "[0,1]을 단단한 선분으로 시각화하라. 이를 덮는 어떤 열린 구간 모임이든 유한 개로 줄일 수 있다. 반면 (0,1)은 {(1/n, 1) : n=1,2,...}로 덮이지만, 0 근처의 점들은 항상 하나의 구간을 더 필요로 하므로 유한 부분덮개가 존재하지 않는다.",
+    "ascii_diagram": "Compact [0,1]:    |=====[=====]=====|\n                  0     covers     1\n                  Any open cover -> finite subcover exists\n\nNot compact (0,1): (----(----(----(->\n                   1/4  1/3  1/2  1\n                   {(1/n,1)} covers (0,1) but no finite subcover"
+  },
+  "counterexample_cards": [
+    {
+      "example_id": "open_unit_interval",
+      "statement": "(0,1) in R is not compact.",
+      "statement_kr": "R에서 (0,1)은 옹골이 아니다.",
+      "explanation": "Consider the open cover {(1/n, 1) : n = 2, 3, 4, ...}. Each point x in (0,1) lies in some (1/n, 1) for n > 1/x. But for any finite subcollection {(1/n_1, 1), ..., (1/n_k, 1)}, taking N = max(n_1,...,n_k), the point 1/(N+1) is in (0,1) but not in any (1/n_i, 1) since 1/(N+1) < 1/N <= 1/n_i. Hence no finite subcover exists.",
+      "explanation_kr": "열린 덮개 {(1/n, 1) : n = 2, 3, 4, ...}를 생각하자. (0,1)의 각 점 x는 n > 1/x인 어떤 (1/n, 1)에 속한다. 하지만 유한 부분모임 {(1/n_1, 1), ..., (1/n_k, 1)}을 택하면, N = max(n_1,...,n_k)으로 놓을 때, 1/(N+1)은 (0,1)에 속하지만 모든 (1/n_i, 1)에 속하지 않는다 (1/(N+1) < 1/N <= 1/n_i이므로). 따라서 유한 부분덮개가 존재하지 않는다.",
+      "source_ref": "Rudin, Example following Theorem 2.36",
+      "required_terms": [
+        "open cover",
+        "(1/n, 1)",
+        "no finite subcover",
+        "finite subcollection"
+      ]
+    },
+    {
+      "example_id": "rationals_in_unit_interval",
+      "statement": "Q ∩ [0,1] (the rationals in [0,1]) is not compact, even though it is bounded.",
+      "statement_kr": "Q ∩ [0,1] (단위 구간 안의 유리수)은 유계이지만 옹골이 아니다.",
+      "explanation": "Q ∩ [0,1] is bounded but not closed in R (its limit points include all irrationals in [0,1]). By Heine-Borel, a subset of R is compact iff closed and bounded, so Q ∩ [0,1] is not compact. Alternatively, one can construct an open cover of Q ∩ [0,1] with no finite subcover by placing small intervals around each rational that avoid sqrt(2)/2.",
+      "explanation_kr": "Q ∩ [0,1]은 유계이지만 R에서 닫혀 있지 않다 (극한점으로 [0,1] 안의 모든 무리수를 포함). Heine-Borel 정리에 의해, R의 부분집합이 옹골일 필요충분조건은 닫히고 유계인 것이므로, Q ∩ [0,1]은 옹골이 아니다.",
+      "source_ref": "Rudin, Theorem 2.41 (Heine-Borel) application",
+      "required_terms": [
+        "bounded",
+        "not closed",
+        "limit points",
+        "Heine-Borel"
+      ]
+    },
+    {
+      "example_id": "integers_unbounded",
+      "statement": "Z (the integers) is closed but not compact in R.",
+      "statement_kr": "Z (정수 집합)는 R에서 닫혀 있지만 옹골이 아니다.",
+      "explanation": "Z is closed (every limit point of Z is in Z, vacuously — Z has no limit points). But Z is unbounded. By Heine-Borel, Z is not compact. Directly: the open cover {(n-0.5, n+0.5) : n in Z} has no proper finite subcover since each interval covers exactly one integer.",
+      "explanation_kr": "Z는 닫혀 있다 (Z의 극한점은 없으므로 공허하게 참). 하지만 Z는 유계가 아니다. Heine-Borel에 의해 Z는 옹골이 아니다. 직접 증명: 열린 덮개 {(n-0.5, n+0.5) : n ∈ Z}는 각 구간이 정확히 하나의 정수만 덮으므로 유한 부분덮개가 존재하지 않는다.",
+      "source_ref": "Rudin, Ch.2 exercises",
+      "required_terms": [
+        "closed",
+        "unbounded",
+        "not compact",
+        "open cover"
+      ]
+    }
+  ],
+  "proof_schema_card": {
+    "theorem": "Heine-Borel Theorem: A subset of R^n is compact if and only if it is closed and bounded.",
+    "theorem_kr": "Heine-Borel 정리: R^n의 부분집합이 옹골일 필요충분조건은 닫히고 유계인 것이다.",
+    "proof_steps": [
+      "(→) Compact implies closed: If K is compact and p is a limit point of K, show p ∈ K. Use open cover construction with balls excluding p.",
+      "(→) Compact implies bounded: Cover K with balls B(0,n) for n=1,2,... Extract finite subcover → K ⊂ B(0,N) for some N.",
+      "(←) Closed and bounded implies compact (key direction): K ⊂ [-M,M]^n for some M.",
+      "Use nested interval / bisection argument: divide the box into 2^n sub-boxes.",
+      "At least one sub-box requires infinitely many open sets from the cover.",
+      "Iterate to get nested sequence of boxes with diameter → 0.",
+      "Intersection is a single point p. Since K is closed, p ∈ K.",
+      "p is in some open set G from the cover. For small enough box, box ⊂ G — contradiction with needing infinitely many sets."
+    ],
+    "source_ref": "Rudin, Theorem 2.41",
+    "required_terms": [
+      "closed",
+      "bounded",
+      "compact",
+      "open cover",
+      "finite subcover",
+      "nested intervals",
+      "Bolzano-Weierstrass"
+    ]
+  },
+  "misconception_cards": [
+    {
+      "misconception_id": "bounded_implies_compact",
+      "claim": "Every bounded set is compact.",
+      "claim_kr": "모든 유계 집합은 compact이다.",
+      "truth_value": false,
+      "correction": "Bounded is necessary but not sufficient in R^n. The set must also be closed. Example: (0,1) is bounded but not compact.",
+      "correction_kr": "R^n에서 유계는 필요조건이지만 충분조건이 아니다. 닫혀 있어야 한다. 예: (0,1)은 유계이지만 옹골이 아니다.",
+      "related_counterexample": "open_unit_interval"
+    },
+    {
+      "misconception_id": "closed_implies_compact",
+      "claim": "Every closed set is compact.",
+      "claim_kr": "닫힌 집합은 항상 compact이다.",
+      "truth_value": false,
+      "correction": "Closed is necessary but not sufficient in R^n. The set must also be bounded. Example: Z is closed but not compact.",
+      "correction_kr": "R^n에서 닫혀 있는 것은 필요조건이지만 충분조건이 아니다. 유계여야 한다. 예: Z는 닫혀 있지만 옹골이 아니다.",
+      "related_counterexample": "integers_unbounded"
+    },
+    {
+      "misconception_id": "subset_of_compact_is_compact",
+      "claim": "Every subset of a compact set is compact.",
+      "claim_kr": "compact 집합의 모든 부분집합은 compact이다.",
+      "truth_value": false,
+      "correction": "Only closed subsets of a compact set are compact (Rudin, Theorem 2.35). Example: (0,1) ⊂ [0,1], but (0,1) is not compact.",
+      "correction_kr": "옹골 집합의 닫힌 부분집합만 옹골이다 (Rudin, Theorem 2.35). 예: (0,1) ⊂ [0,1]이지만 (0,1)은 옹골이 아니다.",
+      "related_counterexample": "open_unit_interval"
+    },
+    {
+      "misconception_id": "misuses_heine_borel",
+      "claim": "Heine-Borel (closed and bounded ↔ compact) applies in any metric space.",
+      "claim_kr": "Heine-Borel (닫히고 유계 ↔ compact)은 임의의 거리 공간에서 성립한다.",
+      "truth_value": false,
+      "correction": "Heine-Borel holds in R^n only. In general metric spaces, compact means every open cover has a finite subcover. Closed and bounded does not imply compact in arbitrary metric spaces.",
+      "correction_kr": "Heine-Borel은 R^n에서만 성립한다. 일반 거리 공간에서 옹골은 모든 열린 덮개가 유한 부분덮개를 가지는 것을 의미하며, 닫히고 유계라고 옹골인 것은 아니다.",
+      "related_counterexample": null
+    },
+    {
+      "misconception_id": "missing_open_cover_argument",
+      "claim": "Non-compactness can be shown by checking closedness or boundedness alone, without constructing an open cover.",
+      "claim_kr": "닫혀 있는지 유계인지만 확인하면 non-compactness를 보일 수 있으며, 열린 덮개를 구성할 필요가 없다.",
+      "truth_value": false,
+      "correction": "In R^n, Heine-Borel provides a shortcut, but the definition of compactness is about open covers. When asked to explain non-compactness using the definition, you must construct a specific open cover with no finite subcover.",
+      "correction_kr": "R^n에서 Heine-Borel은 편법을 제공하지만, 옹골성의 정의는 열린 덮개에 관한 것이다. 정의를 사용해 non-compactness를 설명하라는 과제에서는 유한 부분덮개가 없는 구체적인 열린 덮개를 구성해야 한다.",
+      "related_counterexample": "open_unit_interval"
+    },
+    {
+      "misconception_id": "confuses_sequential_compact",
+      "claim": "Sequential compactness (every sequence has a convergent subsequence) is the same as compactness in all spaces.",
+      "claim_kr": "점렬 옹골성(모든 수열이 수렴하는 부분수열을 가짐)은 모든 공간에서 옹골성과 같다.",
+      "truth_value": false,
+      "correction": "In metric spaces, compactness and sequential compactness are equivalent. But in general topological spaces, they are distinct. In R^n, they coincide.",
+      "correction_kr": "거리 공간에서 옹골성과 점렬 옹골성은 동치이다. 하지만 일반 위상 공간에서는 다르다. R^n에서는 일치한다.",
+      "related_counterexample": null
+    },
+    {
+      "misconception_id": "heine_borel_in_R",
+      "claim": "In R (or R^n), a set is compact if and only if it is closed and bounded.",
+      "claim_kr": "R (또는 R^n)에서 집합이 compact일 필요충분조건은 닫히고 유계인 것이다.",
+      "truth_value": true,
+      "correction": "This is the Heine-Borel theorem and is correct for R^n.",
+      "correction_kr": "이것은 Heine-Borel 정리이며, R^n에서 올바르다.",
+      "related_counterexample": null
+    },
+    {
+      "misconception_id": "open_cover_definition_correct",
+      "claim": "A set is compact if every open cover has a finite subcover.",
+      "claim_kr": "모든 열린 덮개가 유한 부분덮개를 가지면 그 집합은 compact이다.",
+      "truth_value": true,
+      "correction": "This is the correct definition of compactness.",
+      "correction_kr": "이것은 옹골성의 올바른 정의이다.",
+      "related_counterexample": null
+    }
+  ],
+  "required_terms": [
+    "compact",
+    "open cover",
+    "finite subcover",
+    "closed",
+    "bounded",
+    "metric space",
+    "Heine-Borel"
+  ],
+  "allowed_mapping_tasks": [
+    {
+      "task_type": "formal_to_counterexample",
+      "prompt": "Using the formal definition of compactness (open cover / finite subcover), explain why (0,1) is not compact in R.",
+      "prompt_kr": "옹골성의 정의(열린 덮개 / 유한 부분덮개)를 사용하여 (0,1)이 R에서 왜 compact하지 않은지 설명하세요.",
+      "required_terms": [
+        "open cover",
+        "finite subcover",
+        "(1/n, 1)",
+        "no finite subcover"
+      ],
+      "grounding_notes": "Learner must construct the specific open cover {(1/n, 1)} and explain why no finite subcollection suffices. Using only closedness or Heine-Borel shortcut without constructing the cover is a mapping failure."
+    },
+    {
+      "task_type": "counterexample_to_formal",
+      "prompt": "From the fact that (0,1) is not compact, explain what properties a compact set must necessarily have.",
+      "prompt_kr": "(0,1)이 compact하지 않다는 사실로부터, compact 집합이 반드시 가져야 하는 성질을 설명하세요.",
+      "required_terms": [
+        "every open cover",
+        "finite subcover",
+        "closed",
+        "bounded"
+      ],
+      "grounding_notes": "Learner should connect the counterexample back to the definition (every open cover → finite subcover) and optionally note that in R^n, compact implies closed and bounded."
+    },
+    {
+      "task_type": "formal_counterexample_to_proof_schema",
+      "prompt": "Using the definition of compactness and the counterexample (0,1), outline the proof structure of the Heine-Borel theorem.",
+      "prompt_kr": "옹골성의 정의와 반례 (0,1)을 활용하여, Heine-Borel 정리의 증명 구조를 개략적으로 설명하세요.",
+      "required_terms": [
+        "Heine-Borel",
+        "closed and bounded",
+        "compact",
+        "open cover",
+        "finite subcover",
+        "nested intervals"
+      ],
+      "grounding_notes": "Learner should outline both directions of the proof. Key: (→) compact implies closed and bounded is straightforward; (←) closed and bounded implies compact uses bisection / nested intervals argument."
+    }
+  ],
+  "version": "1.0",
+  "created_at": "2026-05-08"
+}
