@@ -45,11 +45,16 @@ export default function RecallSession() {
 
   const [masteryResult, setMasteryResult] = useState<MasteryMapData | null>(null);
   const [feedbackResult, setFeedbackResult] = useState<RecallFeedbackData | null>(null);
+  const [graderMode, setGraderMode] = useState<'mock' | 'llm'>('mock');
 
   useEffect(() => {
     getBanks()
       .then(setBanks)
       .catch((e: unknown) => setBanksError(String(e)));
+    // Determine grader mode from server config
+    fetch('/api/ready').then(r => r.json()).then((data) => {
+      if (data.default_grader === 'llm') setGraderMode('llm');
+    }).catch(() => { /* fallback to mock */ });
   }, []);
 
   // Auto-select from ?concept= param after banks load
@@ -97,10 +102,18 @@ export default function RecallSession() {
     setMasteryResult(null);
     setFeedbackResult(null);
 
+    // Blank-answer warning: refuse all-blank submission
+    const blankCount = displayedQuestions.filter(q => !(answers[q.id] ?? '').trim()).length;
+    if (blankCount === displayedQuestions.length) {
+      setSubmitError('모든 답변이 비어 있습니다. 아는 만큼이라도 적어 보세요.');
+      setSubmitting(false);
+      return;
+    }
+
     const payload: RunSessionRequest = {
       concept_id: selected,
       questions_path: `${selected}/questions.accepted.json`,
-      grader: 'mock',
+      grader: graderMode,
       answers: displayedQuestions.map((q) => ({
         question_id: q.id,
         learner_response: answers[q.id] ?? '',
@@ -264,13 +277,22 @@ export default function RecallSession() {
                 </div>
               ))}
 
-              <button
-                className="submit-btn"
-                onClick={handleSubmit}
-                disabled={submitDisabled}
-              >
-                {submitting ? '제출 중…' : '제출 (모의 채점)'}
-              </button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <button
+                  className="submit-btn"
+                  onClick={handleSubmit}
+                  disabled={submitDisabled}
+                >
+                  {submitting ? '제출 중…' : '제출'}
+                </button>
+                <span style={{
+                  fontSize: 11, padding: '2px 8px', borderRadius: 4,
+                  background: graderMode === 'mock' ? '#fef3c7' : '#d1fae5',
+                  color: graderMode === 'mock' ? '#92400e' : '#065f46',
+                }}>
+                  {graderMode === 'mock' ? '모의 채점' : 'LLM 채점'}
+                </span>
+              </div>
             </>
           )}
         </div>
@@ -347,7 +369,10 @@ export default function RecallSession() {
           {/* Weak questions */}
           {feedbackResult && (() => {
             const weak = feedbackResult.filter(
-              f => f.accuracy_score < 0.5 || f.needs_human_review
+              f => f.accuracy_score < 0.5
+                || f.needs_human_review
+                || f.errors.length > 0
+                || (f.missing_elements.length > 2 && f.accuracy_score < 0.85)
             );
             return (
               <div style={{ marginBottom: 16 }}>

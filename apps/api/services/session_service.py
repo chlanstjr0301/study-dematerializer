@@ -209,12 +209,21 @@ def run_session(req: Any, runs_dir: Path | None = None, study_md_path: Path | No
                     q.question_id,
                 )
             response = answer_map.get(q.question_id, "")
-            grading = grader.grade(
-                question=q.question,
-                expected_answer=q.expected_answer,
-                evidence_text=q.evidence.source_text,
-                learner_response=response,
-            )
+            if not response.strip():
+                grading = GradingResult(
+                    accuracy_score=0.0,
+                    needs_human_review=False,
+                    feedback="No answer provided.",
+                    mastery_suggestion="unknown",
+                    raw_response="",
+                )
+            else:
+                grading = grader.grade(
+                    question=q.question,
+                    expected_answer=q.expected_answer,
+                    evidence_text=q.evidence.source_text,
+                    learner_response=response,
+                )
             responses.append((response, grading))
         attempt_results = run_white_recall_batch(questions, responses)
     else:

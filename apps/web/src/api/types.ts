@@ -97,7 +97,7 @@ export interface AnswerInput {
 export interface RunSessionRequest {
   concept_id: string;
   questions_path: string;
-  grader: 'mock';
+  grader: 'mock' | 'llm' | 'self';
   model?: string;
   limit?: number | null;
   answers?: AnswerInput[];
@@ -214,7 +214,7 @@ export interface ConceptItem {
 export interface CompileConceptRequest {
   source_relative_path: string;
   document_id: string;
-  grader?: 'mock';
+  grader?: 'mock' | 'llm' | 'self';
 }
 
 export interface CompileConceptResponse {

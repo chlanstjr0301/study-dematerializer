@@ -165,6 +165,28 @@ class TestReadyEndpoint:
         data = client.get("/api/ready").json()
         assert data["ready"] is True
 
+    def test_ready_default_grader_mock_when_llm_disabled(self, ready_env):
+        from apps.api.main import app
+        client = TestClient(app)
+        data = client.get("/api/ready").json()
+        assert data["default_grader"] == "mock"
+
+    def test_ready_default_grader_llm_when_enabled_with_key(self, ready_env, monkeypatch):
+        from apps.api.main import app
+        monkeypatch.setattr(config, "LLM_DISABLED", False)
+        monkeypatch.setenv("OPENAI_API_KEY", "sk-test-fake-key")
+        client = TestClient(app)
+        data = client.get("/api/ready").json()
+        assert data["default_grader"] == "llm"
+
+    def test_ready_default_grader_mock_when_no_key(self, ready_env, monkeypatch):
+        from apps.api.main import app
+        monkeypatch.setattr(config, "LLM_DISABLED", False)
+        monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+        client = TestClient(app)
+        data = client.get("/api/ready").json()
+        assert data["default_grader"] == "mock"
+
 
 # ---------------------------------------------------------------------------
 # TestSPAFrontendServing

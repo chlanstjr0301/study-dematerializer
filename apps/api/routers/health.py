@@ -47,4 +47,11 @@ def ready() -> ReadyResponse:
         checks["data_dir"] == "ok"
         and checks["study_md"] in ("ok", "missing")
     )
-    return ReadyResponse(ready=is_ready, checks=checks)
+
+    # Determine default grader: "llm" when LLM is enabled + API key present
+    if not config.LLM_DISABLED and os.environ.get("OPENAI_API_KEY"):
+        default_grader = "llm"
+    else:
+        default_grader = "mock"
+
+    return ReadyResponse(ready=is_ready, checks=checks, default_grader=default_grader)

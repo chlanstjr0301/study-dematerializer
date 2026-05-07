@@ -21,6 +21,7 @@ class HealthResponse(BaseModel):
 class ReadyResponse(BaseModel):
     ready: bool
     checks: dict[str, str]
+    default_grader: str = "mock"  # "llm" when available, "mock" otherwise
 
 
 class DueConceptItem(BaseModel):

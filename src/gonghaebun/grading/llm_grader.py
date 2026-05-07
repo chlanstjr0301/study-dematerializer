@@ -99,6 +99,16 @@ class LLMGrader(AnswerGrader):
         A LLMTraceRecord is appended to self.traces for every question
         that reaches the LLM (not for immediate max_calls fallbacks).
         """
+        # Blank detection — score 0 immediately, no LLM call needed.
+        if not learner_response.strip():
+            return GradingResult(
+                accuracy_score=0.0,
+                needs_human_review=False,
+                feedback="No answer provided.",
+                mastery_suggestion="unknown",
+                raw_response="",
+            )
+
         if self._call_count >= self._max_calls:
             return GradingResult(
                 accuracy_score=0.0,
