@@ -252,6 +252,7 @@ class StudyValidationReport(BaseModel):
 class AnalyzeRequest(BaseModel):
     message: str
     source_id: str | None = None
+    recent_messages: list[str] | None = None
 
 
 class PrerequisiteCheck(BaseModel):
@@ -278,6 +279,8 @@ class AnalyzeResponse(BaseModel):
     prerequisite_checks: list[PrerequisiteCheck]
     recommended_actions: list[RecommendedAction]
     representations: dict[str, str] | None = None
+    intent: str = "concept_lookup"
+    direct_answer: str | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -373,6 +376,7 @@ class SelfExplainResponse(BaseModel):
     missing_elements: list[str]
     errors: list[str]
     feedback: str
+    grader_source: str = "mock"
 
 
 class RecallSubmitRequest(BaseModel):
@@ -384,6 +388,7 @@ class RecallSubmitResponse(BaseModel):
     missing_elements: list[str]
     errors: list[str]
     feedback: str
+    grader_source: str = "mock"
 
 
 class MasteryUpdateItem(BaseModel):

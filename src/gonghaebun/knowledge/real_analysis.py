@@ -15,7 +15,7 @@ CONCEPTS: dict[str, Concept] = {
         concept_id="compactness",
         canonical_name="Compactness",
         domain="real_analysis",
-        aliases=["compact", "compact set", "옹골성", "콤팩트", "compactness"],
+        aliases=["compact", "compact set", "옹골성", "콤팩트", "compactness", "컴팩트성", "콤팩트성"],
         prerequisites=[
             "metric_space",
             "open_set",
@@ -41,7 +41,7 @@ CONCEPTS: dict[str, Concept] = {
         concept_id="uniform_continuity",
         canonical_name="Uniform Continuity",
         domain="real_analysis",
-        aliases=["uniformly continuous", "균등 연속", "uniform_continuity"],
+        aliases=["uniformly continuous", "균등 연속", "uniform_continuity", "균등연속"],
         prerequisites=["continuity", "metric_space", "compactness"],
     ),
     # ---------------------------------------------------------------------------

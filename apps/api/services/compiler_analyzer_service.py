@@ -282,15 +282,32 @@ def _infer_gap(message: str) -> str:
 # ---------------------------------------------------------------------------
 
 
-def analyze_message(message: str, source_id: str | None = None) -> dict:
+def analyze_message(
+    message: str,
+    source_id: str | None = None,
+    recent_messages: list[str] | None = None,
+) -> dict:
     """
     Rule-based concept analysis from a Korean/English user message.
 
     Returns dict matching AnalyzeResponse schema.
     """
+    from apps.api.services.intent_router import classify_intent, generate_direct_answer
+
     message = message.strip()
     if not message:
-        return _no_match_response(correction=None)
+        resp = _no_match_response(correction=None)
+        resp["intent"] = "unsupported"
+        resp["direct_answer"] = None
+        return resp
+
+    # 0. Classify intent first (conversation-first)
+    intent_result = classify_intent(message, recent_messages)
+    intent = intent_result["intent"]
+    intent_concept_id = intent_result["concept_id"]
+
+    # Generate direct answer for conversational intents
+    direct_answer = generate_direct_answer(intent, intent_concept_id, message, recent_messages)
 
     # 1. Score concepts by alias + keyword matches
     scores = _score_concepts(message)
@@ -302,8 +319,15 @@ def analyze_message(message: str, source_id: str | None = None) -> dict:
         # 2. Fuzzy fallback
         concept_id, correction = _fuzzy_match(message)
 
+    # Use intent router's concept if scorer didn't find one
+    if concept_id is None and intent_concept_id is not None:
+        concept_id = intent_concept_id
+
     if concept_id is None:
-        return _no_match_response(correction=None)
+        resp = _no_match_response(correction=None)
+        resp["intent"] = intent
+        resp["direct_answer"] = direct_answer
+        return resp
 
     # 3. Build response
     concept = CONCEPTS[concept_id]
@@ -358,6 +382,8 @@ def analyze_message(message: str, source_id: str | None = None) -> dict:
         "prerequisite_checks": prereq_checks,
         "recommended_actions": actions,
         "representations": representations,
+        "intent": intent,
+        "direct_answer": direct_answer,
     }
 
 

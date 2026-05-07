@@ -53,18 +53,37 @@ export default function ChatCompiler() {
     setMessages(prev => [...prev, { role: 'user', content: msg }]);
     setLoading(true);
     try {
+      // Collect recent user messages for context
+      const recentUserMsgs = messages
+        .filter(m => m.role === 'user')
+        .slice(-5)
+        .map(m => m.content);
+
       const res = await analyzeMessage({
         message: msg,
         source_id: selectedSourceId || undefined,
+        recent_messages: recentUserMsgs.length > 0 ? recentUserMsgs : undefined,
       });
+
+      // Use direct_answer if available, otherwise fall back to concept name or fallback
+      const bubbleText = res.direct_answer
+        ? res.direct_answer
+        : res.concept_id
+          ? `${res.canonical_name_ko} ${res.canonical_name_en}`
+          : '해당 개념을 찾을 수 없습니다.';
+
+      // Suppress duplicate concept card if same concept as previous response
+      const prevAssistant = [...messages].reverse().find(m => m.role === 'assistant');
+      const isDuplicateConcept = res.concept_id
+        && prevAssistant?.analysis?.concept_id === res.concept_id
+        && res.direct_answer;  // Only suppress when direct answer is provided
+
       setMessages(prev => [
         ...prev,
         {
           role: 'assistant',
-          content: res.concept_id
-            ? `${res.canonical_name_ko} ${res.canonical_name_en}`
-            : '해당 개념을 찾을 수 없습니다.',
-          analysis: res,
+          content: bubbleText,
+          analysis: isDuplicateConcept ? undefined : res,
         },
       ]);
     } catch (e: unknown) {

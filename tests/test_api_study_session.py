@@ -125,13 +125,12 @@ class TestCreateStudySession:
         resp = client.post("/api/study-session", json={"concept_id": "nonexistent_concept"})
         assert resp.status_code == 422
 
-    def test_no_source_returns_422(self, study_env):
-        # Remove all source files
+    def test_no_source_uses_synthetic_fallback(self, study_env):
+        # Remove all source files — MVP6-Hotfix: falls back to synthetic source
         for f in study_env["sources_dir"].iterdir():
             f.unlink()
         resp = client.post("/api/study-session", json={"concept_id": "compactness"})
-        assert resp.status_code == 422
-        assert "소스 파일을 찾을 수 없습니다" in resp.json()["detail"]
+        assert resp.status_code == 201
 
     def test_explicit_source_path_used(self, study_env):
         resp = client.post("/api/study-session", json={

@@ -266,6 +266,7 @@ export interface StudyValidationReport {
 export interface AnalyzeRequest {
   message: string;
   source_id?: string;
+  recent_messages?: string[];
 }
 
 export interface PrerequisiteCheck {
@@ -292,6 +293,8 @@ export interface AnalyzeResponse {
   prerequisite_checks: PrerequisiteCheck[];
   recommended_actions: RecommendedAction[];
   representations: Record<string, string> | null;
+  intent: string;
+  direct_answer: string | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -450,6 +453,7 @@ export interface SelfExplainResponse {
   missing_elements: string[];
   errors: string[];
   feedback: string;
+  grader_source?: string;
 }
 
 export interface RecallSubmitRequest {
@@ -461,6 +465,7 @@ export interface RecallSubmitResponse {
   missing_elements: string[];
   errors: string[];
   feedback: string;
+  grader_source?: string;
 }
 
 export interface MasteryUpdateItem {

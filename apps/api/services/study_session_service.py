@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 import shutil
 import time
 from datetime import datetime, timezone
@@ -24,6 +25,35 @@ REQUIRED_SELF_EXPLANATIONS = {"formal", "proof_schema"}
 _ALLOWED_SOURCE_EXTS = {".md", ".txt"}
 
 logger = logging.getLogger("gonghaebun.api.study_session")
+
+_INVALID_ANSWER_FEEDBACK = "답변이 비어 있거나 의미 있는 수학적 설명으로 보기 어렵습니다."
+
+_GIBBERISH_RE = re.compile(r'^[\s\W\d□■○●◆◇★☆♠♣♥♦ㄱ-ㅎㅏ-ㅣ]+$')
+
+
+def _is_gibberish(text: str) -> bool:
+    """Detect empty, whitespace-only, punctuation-only, or keyboard-smash input."""
+    stripped = text.strip()
+    if not stripped:
+        return True
+    if _GIBBERISH_RE.fullmatch(stripped):
+        return True
+    if len(stripped) < 5:
+        return True
+    unique_chars = set(stripped.replace(' ', ''))
+    if len(unique_chars) <= 3 and len(stripped) > 5:
+        return True
+    return False
+
+
+def _get_grader_source() -> str:
+    """Determine grader source label from current LLM client type."""
+    from gonghaebun.llm.factory import get_llm_client
+    from gonghaebun.llm.mock import MockLLMClient
+    llm = get_llm_client()
+    if isinstance(llm, MockLLMClient):
+        return "mock"
+    return "llm"
 
 
 # ---------------------------------------------------------------------------
@@ -173,8 +203,27 @@ def create_study_session(
     except ConceptNotFoundError:
         raise ConceptNotFoundError(concept_id)
 
-    # 3. Resolve source file
-    source_path = _resolve_source(source_relative_path, _data_root, _sources_dir)
+    # 3. Resolve source file (fallback to synthetic source if none uploaded)
+    try:
+        source_path = _resolve_source(source_relative_path, _data_root, _sources_dir)
+    except ValueError:
+        if source_relative_path:
+            # Explicit path was given but not found — re-raise
+            raise
+        # No source uploaded — create a minimal synthetic source so pipeline can run
+        logger.warning(
+            "session_source_fallback concept=%s — no uploaded source, using synthetic",
+            concept_id,
+        )
+        synthetic_dir = _runs_dir / ".synthetic_sources"
+        synthetic_dir.mkdir(parents=True, exist_ok=True)
+        synthetic_path = synthetic_dir / f"{concept_id}_synthetic.md"
+        if not synthetic_path.exists():
+            synthetic_path.write_text(
+                f"# {concept_id}\n\nSynthetic source for study session.\n",
+                encoding="utf-8",
+            )
+        source_path = synthetic_path
 
     # 4. Generate session
     session_id = str(uuid4())
@@ -399,22 +448,55 @@ def submit_self_explanation(
     if not learner_explanation.strip():
         raise ValueError("자기 설명을 입력해 주세요")
 
-    # Load target content from representation_set.json
+    concept_id = state["concept_id"]
     session_dir = _runs_dir / session_id
+
+    # Gibberish guard — score 0 without calling LLM
+    if _is_gibberish(learner_explanation):
+        logger.info(
+            "grading_request concept_id=%s step=self_explain/%s configured_grader=invalid_answer",
+            concept_id, representation_type,
+        )
+        logger.info("grading_result source=invalid_answer score=0.0")
+        eval_result = {
+            "representation_type": representation_type,
+            "accuracy_score": 0.0,
+            "missing_elements": [],
+            "errors": [],
+            "feedback": _INVALID_ANSWER_FEEDBACK,
+            "grader_source": "invalid_answer",
+        }
+        if state["self_explanations"] is None:
+            state["self_explanations"] = {}
+        state["self_explanations"][representation_type] = {
+            "learner_explanation": learner_explanation,
+            **{k: v for k, v in eval_result.items() if k != "grader_source"},
+        }
+        state["updated_at"] = datetime.now(timezone.utc).isoformat()
+        _write_state(session_dir, state)
+        return eval_result
+
+    # Load target content from representation_set.json
     rep_set_path = session_dir / "representation_set.json"
     rep_set_data: dict = json.loads(rep_set_path.read_text(encoding="utf-8"))
     representations = _extract_representations(rep_set_data)
     target_content = representations.get(representation_type, "")
 
     # Evaluate
+    grader_source = _get_grader_source()
+    logger.info(
+        "grading_request concept_id=%s step=self_explain/%s configured_grader=%s",
+        concept_id, representation_type, grader_source,
+    )
     llm = get_llm_client()
     evaluation = evaluate_self_explanation(
-        concept_id=state["concept_id"],
+        concept_id=concept_id,
         representation_type=representation_type,
         target_content=target_content,
         learner_response=learner_explanation,
         llm=llm,
     )
+    logger.info("grading_result source=%s score=%s", grader_source, evaluation.accuracy_score)
 
     # Store in state
     if state["self_explanations"] is None:
@@ -443,6 +525,7 @@ def submit_self_explanation(
         "missing_elements": evaluation.missing_elements,
         "errors": evaluation.errors,
         "feedback": evaluation.feedback,
+        "grader_source": grader_source,
     }
 
 
@@ -454,7 +537,6 @@ def submit_recall(
     """Evaluate White Recall submission."""
     from gonghaebun.llm.factory import get_llm_client
     from gonghaebun.pipeline.evaluation_schema import EVALUATION_OUTPUT_SCHEMA, validate_evaluation_output
-    from gonghaebun.prompts import load_prompt
 
     _runs_dir = runs_dir or config.RUNS_DIR
     state = get_study_session(session_id, _runs_dir)
@@ -465,8 +547,33 @@ def submit_recall(
     if not learner_response.strip():
         raise ValueError("인출 응답을 입력해 주세요")
 
-    # Load representation_set for combined target
+    concept_id = state["concept_id"]
     session_dir = _runs_dir / session_id
+
+    # Gibberish guard — score 0 without calling LLM
+    if _is_gibberish(learner_response):
+        logger.info(
+            "grading_request concept_id=%s step=recall configured_grader=invalid_answer",
+            concept_id,
+        )
+        logger.info("grading_result source=invalid_answer score=0.0")
+        eval_result = {
+            "accuracy_score": 0.0,
+            "missing_elements": [],
+            "errors": [],
+            "feedback": _INVALID_ANSWER_FEEDBACK,
+            "grader_source": "invalid_answer",
+        }
+        state["recall_evaluation"] = {
+            "learner_response": learner_response,
+            **{k: v for k, v in eval_result.items() if k != "grader_source"},
+        }
+        state["recall_completed"] = True
+        state["updated_at"] = datetime.now(timezone.utc).isoformat()
+        _write_state(session_dir, state)
+        return eval_result
+
+    # Load representation_set for combined target
     rep_set_path = session_dir / "representation_set.json"
     rep_set_data: dict = json.loads(rep_set_path.read_text(encoding="utf-8"))
     representations = _extract_representations(rep_set_data)
@@ -475,8 +582,13 @@ def submit_recall(
     )
 
     # Evaluate using recall_eval fixture
+    grader_source = _get_grader_source()
+    logger.info(
+        "grading_request concept_id=%s step=recall configured_grader=%s",
+        concept_id, grader_source,
+    )
     llm = get_llm_client()
-    concept_id = state["concept_id"]
+    from gonghaebun.prompts import load_prompt
     system = load_prompt("global_system")
     stage5_prompt = load_prompt("stage5_self_explanation_evaluator")
     user = (
@@ -489,6 +601,7 @@ def submit_recall(
     )
     data = llm.complete_structured(system, user, EVALUATION_OUTPUT_SCHEMA)
     evaluation = validate_evaluation_output(data)
+    logger.info("grading_result source=%s score=%s", grader_source, evaluation.accuracy_score)
 
     # Store in state
     state["recall_evaluation"] = {
@@ -515,6 +628,7 @@ def submit_recall(
         "missing_elements": evaluation.missing_elements,
         "errors": evaluation.errors,
         "feedback": evaluation.feedback,
+        "grader_source": grader_source,
     }
 
 

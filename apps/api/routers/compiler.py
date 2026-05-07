@@ -16,5 +16,6 @@ def analyze(req: AnalyzeRequest) -> AnalyzeResponse:
     result = compiler_analyzer_service.analyze_message(
         message=req.message,
         source_id=req.source_id,
+        recent_messages=req.recent_messages,
     )
     return AnalyzeResponse(**result)

@@ -197,7 +197,7 @@ class TestInvalidResponseReturns502:
 
         resp = client.post(f"/api/study-session/{sid}/self-explain", json={
             "representation_type": "formal",
-            "learner_explanation": "test",
+            "learner_explanation": "A compact set has every open cover with a finite subcover",
         })
         assert resp.status_code == 502
 
@@ -221,7 +221,7 @@ class TestStatePollutionPrevention:
 
         resp = client.post(f"/api/study-session/{sid}/self-explain", json={
             "representation_type": "formal",
-            "learner_explanation": "test",
+            "learner_explanation": "A compact set has every open cover with a finite subcover",
         })
         assert resp.status_code == 502
 
@@ -265,7 +265,7 @@ class TestExistingErrorCodesPreserved:
 
         resp = client.post(f"/api/study-session/{sid}/self-explain", json={
             "representation_type": "invalid_type",
-            "learner_explanation": "test",
+            "learner_explanation": "A compact set has every open cover with a finite subcover",
         })
         assert resp.status_code == 400
 
@@ -292,7 +292,7 @@ class TestExistingErrorCodesPreserved:
         """FileNotFoundError → 404."""
         resp = client.post("/api/study-session/nonexistent-id/self-explain", json={
             "representation_type": "formal",
-            "learner_explanation": "test",
+            "learner_explanation": "A compact set has every open cover with a finite subcover",
         })
         assert resp.status_code == 404
 
