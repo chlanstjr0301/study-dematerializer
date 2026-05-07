@@ -1,0 +1,25 @@
+{
+  "version": "1.0",
+  "concept_id": "compactness",
+  "instructions": "For each learner answer, rate the mastery level and check for misconceptions.",
+  "mastery_levels": {
+    "solid": "Learner demonstrates complete understanding of the asked concept/mapping. All required terms present. No misconceptions.",
+    "partial": "Learner shows some understanding but misses key terms or uses shortcuts (e.g., Heine-Borel instead of open cover). May have minor misconceptions.",
+    "unknown": "Learner does not demonstrate understanding. Missing most required terms. May have critical misconceptions or give a vague/empty answer."
+  },
+  "misconception_checklist": [
+    {"id": "bounded_implies_compact", "description": "Claims bounded implies compact without requiring closure"},
+    {"id": "closed_implies_compact", "description": "Claims closed implies compact without requiring boundedness"},
+    {"id": "misuses_heine_borel", "description": "Applies Heine-Borel outside R^n or uses it when open cover argument is required"},
+    {"id": "missing_open_cover_argument", "description": "Explains non-compactness without constructing an open cover / finite subcover argument"},
+    {"id": "subset_of_compact_is_compact", "description": "Claims all subsets of a compact set are compact"},
+    {"id": "confuses_sequential_compact", "description": "Confuses sequential compactness with compactness"}
+  ],
+  "rating_instructions": [
+    "1. Read the task prompt and learner response.",
+    "2. Assign mastery level: solid, partial, or unknown.",
+    "3. Check all applicable misconceptions from the checklist.",
+    "4. If you are unsure about the mastery level, mark needs_review=true.",
+    "5. Add optional notes explaining your rating."
+  ]
+}

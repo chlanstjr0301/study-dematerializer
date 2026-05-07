@@ -1,0 +1,26 @@
+answer_id,mastery,misconceptions,needs_review,notes
+ca001,solid,,false,
+ca002,partial,misuses_heine_borel,false,Uses Heine-Borel shortcut
+ca003,unknown,,false,Vague non-answer
+ca004,solid,,false,
+ca005,partial,,false,Missing open cover
+ca006,unknown,"misuses_heine_borel,missing_open_cover_argument",false,Uses closedness not open cover
+ca007,solid,,false,
+ca008,partial,missing_open_cover_argument,false,Heine-Borel shortcut not definition
+ca009,unknown,,false,Empty answer
+ca010,partial,,false,Correct for R only
+ca011,solid,,false,
+ca012,unknown,,false,No content
+ca013,solid,,false,
+ca014,partial,,false,Knows theorem not proof
+ca015,partial,,false,One direction only
+ca016,solid,,false,
+ca017,partial,,false,No proof steps
+ca018,unknown,,false,Minimal recall
+ca019,solid,,false,
+ca020,unknown,,false,Fragmented
+ca021,unknown,bounded_implies_compact,false,Misconception present
+ca022,unknown,subset_of_compact_is_compact,false,Circular reasoning
+ca023,partial,confuses_sequential_compact,false,Defines via sequential compactness
+ca024,unknown,"closed_implies_compact,missing_open_cover_argument",false,Wrong reasoning
+ca025,solid,,false,
