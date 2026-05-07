@@ -2,8 +2,13 @@
 Tests for MVP6 rubric models: TermCheck, MisconceptionCheck, TaskRubric, ConceptRubric.
 
 Step 2: Validate instantiation, serialization, and rejection of invalid data.
+Step 3: Validate compactness.rubric.json loads and has correct structure.
 """
 from __future__ import annotations
+
+import json
+import re
+from pathlib import Path
 
 import pytest
 from pydantic import ValidationError
@@ -196,3 +201,103 @@ class TestConceptRubric:
         restored = ConceptRubric.model_validate_json(json_str)
         assert restored.concept_id == rubric.concept_id
         assert len(restored.task_rubrics) == len(rubric.task_rubrics)
+
+
+# ---------------------------------------------------------------------------
+# Compactness rubric JSON load tests (Step 3)
+# ---------------------------------------------------------------------------
+
+CARDS_DIR = Path(__file__).resolve().parent.parent / "src" / "gonghaebun" / "cards"
+COMPACTNESS_RUBRIC_PATH = CARDS_DIR / "real_analysis" / "compactness.rubric.json"
+
+EXPECTED_TASK_RUBRIC_KEYS = {
+    "self_explain_formal",
+    "self_explain_counterexample",
+    "self_explain_proof_schema",
+    "mapping_formal_to_counterexample",
+    "mapping_counterexample_to_formal",
+    "mapping_formal_counterexample_to_proof_schema",
+    "recall",
+    "misconception_quiz",
+}
+
+
+@pytest.fixture
+def compactness_rubric() -> ConceptRubric:
+    """Load and validate the compactness rubric from disk."""
+    assert COMPACTNESS_RUBRIC_PATH.exists(), (
+        f"Rubric file not found: {COMPACTNESS_RUBRIC_PATH}"
+    )
+    raw = json.loads(COMPACTNESS_RUBRIC_PATH.read_text(encoding="utf-8"))
+    return ConceptRubric.model_validate(raw)
+
+
+class TestCompactnessRubricLoad:
+    """Validate the compactness.rubric.json artifact."""
+
+    def test_rubric_loads_from_json(self, compactness_rubric: ConceptRubric) -> None:
+        assert compactness_rubric.concept_id == "compactness"
+        assert compactness_rubric.domain == "real_analysis"
+
+    def test_all_eight_task_rubrics_present(self, compactness_rubric: ConceptRubric) -> None:
+        assert set(compactness_rubric.task_rubrics.keys()) == EXPECTED_TASK_RUBRIC_KEYS
+
+    def test_task_type_matches_key(self, compactness_rubric: ConceptRubric) -> None:
+        for key, rubric in compactness_rubric.task_rubrics.items():
+            assert rubric.task_type == key, (
+                f"task_rubrics[{key!r}].task_type is {rubric.task_type!r}"
+            )
+
+    def test_scored_tasks_have_required_terms(self, compactness_rubric: ConceptRubric) -> None:
+        scored_keys = EXPECTED_TASK_RUBRIC_KEYS - {"misconception_quiz"}
+        for key in scored_keys:
+            rubric = compactness_rubric.task_rubrics[key]
+            assert len(rubric.required_terms) > 0, (
+                f"task_rubrics[{key!r}] has no required_terms"
+            )
+
+    def test_misconception_quiz_has_no_required_terms(self, compactness_rubric: ConceptRubric) -> None:
+        quiz = compactness_rubric.task_rubrics["misconception_quiz"]
+        assert len(quiz.required_terms) == 0
+
+    def test_recall_threshold_lower(self, compactness_rubric: ConceptRubric) -> None:
+        recall = compactness_rubric.task_rubrics["recall"]
+        assert recall.pass_threshold == 0.50
+
+    def test_non_recall_thresholds_are_070(self, compactness_rubric: ConceptRubric) -> None:
+        for key, rubric in compactness_rubric.task_rubrics.items():
+            if key != "recall":
+                assert rubric.pass_threshold == 0.70, (
+                    f"task_rubrics[{key!r}].pass_threshold is {rubric.pass_threshold}"
+                )
+
+    def test_global_misconception_checks_populated(self, compactness_rubric: ConceptRubric) -> None:
+        assert len(compactness_rubric.global_misconception_checks) >= 3
+        ids = {mc.misconception_id for mc in compactness_rubric.global_misconception_checks}
+        assert "bounded_implies_compact" in ids
+        assert "misuses_heine_borel" in ids
+
+    def test_global_misconception_trigger_patterns_valid_regex(self, compactness_rubric: ConceptRubric) -> None:
+        for mc in compactness_rubric.global_misconception_checks:
+            for pattern in mc.trigger_patterns:
+                re.compile(pattern)  # raises re.error if invalid
+
+    def test_task_misconception_trigger_patterns_valid_regex(self, compactness_rubric: ConceptRubric) -> None:
+        for key, rubric in compactness_rubric.task_rubrics.items():
+            for mc in rubric.misconception_checks:
+                for pattern in mc.trigger_patterns:
+                    re.compile(pattern)  # raises re.error if invalid
+
+    def test_formal_task_has_korean_aliases(self, compactness_rubric: ConceptRubric) -> None:
+        formal = compactness_rubric.task_rubrics["self_explain_formal"]
+        all_aliases = []
+        for tc in formal.required_terms:
+            all_aliases.extend(tc.aliases)
+        korean_aliases = [a for a in all_aliases if any("\uac00" <= ch <= "\ud7a3" for ch in a)]
+        assert len(korean_aliases) >= 2, "Expected at least 2 Korean aliases in self_explain_formal"
+
+    def test_json_roundtrip(self, compactness_rubric: ConceptRubric) -> None:
+        json_str = compactness_rubric.model_dump_json()
+        restored = ConceptRubric.model_validate_json(json_str)
+        assert restored.concept_id == compactness_rubric.concept_id
+        assert set(restored.task_rubrics.keys()) == set(compactness_rubric.task_rubrics.keys())

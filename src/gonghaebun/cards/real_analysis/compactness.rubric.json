@@ -1,0 +1,189 @@
+{
+  "concept_id": "compactness",
+  "domain": "real_analysis",
+  "version": "1.0",
+  "task_rubrics": {
+    "self_explain_formal": {
+      "task_type": "self_explain_formal",
+      "required_terms": [
+        {"term": "open cover", "weight": 2.0, "aliases": ["열린 덮개"]},
+        {"term": "finite subcover", "weight": 2.0, "aliases": ["유한 부분덮개"]},
+        {"term": "every", "weight": 1.0, "aliases": ["모든"]},
+        {"term": "metric space", "weight": 1.0, "aliases": ["거리 공간"]}
+      ],
+      "misconception_checks": [
+        {
+          "misconception_id": "bounded_implies_compact",
+          "trigger_patterns": ["유계.*compact", "bounded.*compact", "유계이면.*옹골"],
+          "severity": "critical"
+        },
+        {
+          "misconception_id": "closed_implies_compact",
+          "trigger_patterns": ["닫힌.*compact", "closed.*compact", "닫힌.*옹골"],
+          "severity": "critical"
+        }
+      ],
+      "pass_threshold": 0.70,
+      "scoring_method": "term_coverage"
+    },
+    "self_explain_counterexample": {
+      "task_type": "self_explain_counterexample",
+      "required_terms": [
+        {"term": "open cover", "weight": 2.0, "aliases": ["열린 덮개"]},
+        {"term": "(1/n, 1)", "weight": 2.0, "aliases": ["(1/n,1)"]},
+        {"term": "no finite subcover", "weight": 2.0, "aliases": ["유한 부분덮개가 존재하지 않", "유한 부분덮개가 없"]},
+        {"term": "(0,1)", "weight": 1.0, "aliases": []}
+      ],
+      "misconception_checks": [
+        {
+          "misconception_id": "missing_open_cover_argument",
+          "trigger_patterns": ["닫혀.*않.*compact", "closed.*not.*compact"],
+          "severity": "moderate"
+        }
+      ],
+      "pass_threshold": 0.70,
+      "scoring_method": "term_coverage"
+    },
+    "self_explain_proof_schema": {
+      "task_type": "self_explain_proof_schema",
+      "required_terms": [
+        {"term": "Heine-Borel", "weight": 2.0, "aliases": ["하이네-보렐"]},
+        {"term": "closed", "weight": 1.5, "aliases": ["닫힌", "닫혀"]},
+        {"term": "bounded", "weight": 1.5, "aliases": ["유계"]},
+        {"term": "compact", "weight": 1.0, "aliases": ["옹골"]},
+        {"term": "open cover", "weight": 1.0, "aliases": ["열린 덮개"]},
+        {"term": "finite subcover", "weight": 1.0, "aliases": ["유한 부분덮개"]},
+        {"term": "nested intervals", "weight": 1.0, "aliases": ["축소 구간", "bisection"]}
+      ],
+      "misconception_checks": [
+        {
+          "misconception_id": "misuses_heine_borel",
+          "trigger_patterns": ["heine.borel.*일반", "heine.borel.*metric", "닫히고.*유계.*compact(?!.*R\\^n)"],
+          "severity": "moderate"
+        }
+      ],
+      "pass_threshold": 0.70,
+      "scoring_method": "term_coverage"
+    },
+    "mapping_formal_to_counterexample": {
+      "task_type": "mapping_formal_to_counterexample",
+      "required_terms": [
+        {"term": "open cover", "weight": 2.0, "aliases": ["열린 덮개"]},
+        {"term": "finite subcover", "weight": 2.0, "aliases": ["유한 부분덮개"]},
+        {"term": "(1/n, 1)", "weight": 2.0, "aliases": ["(1/n,1)"]},
+        {"term": "no finite subcover", "weight": 1.5, "aliases": ["유한 부분덮개가 존재하지 않", "유한 부분덮개가 없"]}
+      ],
+      "misconception_checks": [
+        {
+          "misconception_id": "missing_open_cover_argument",
+          "trigger_patterns": ["닫혀.*않.*compact", "closed.*not.*compact"],
+          "severity": "moderate"
+        },
+        {
+          "misconception_id": "misuses_heine_borel",
+          "trigger_patterns": ["heine.borel.*일반", "heine.borel.*metric"],
+          "severity": "moderate"
+        }
+      ],
+      "pass_threshold": 0.70,
+      "scoring_method": "term_coverage"
+    },
+    "mapping_counterexample_to_formal": {
+      "task_type": "mapping_counterexample_to_formal",
+      "required_terms": [
+        {"term": "every open cover", "weight": 2.0, "aliases": ["모든 열린 덮개"]},
+        {"term": "finite subcover", "weight": 2.0, "aliases": ["유한 부분덮개"]},
+        {"term": "closed", "weight": 1.0, "aliases": ["닫힌", "닫혀"]},
+        {"term": "bounded", "weight": 1.0, "aliases": ["유계"]}
+      ],
+      "misconception_checks": [
+        {
+          "misconception_id": "bounded_implies_compact",
+          "trigger_patterns": ["유계.*compact", "bounded.*compact", "유계이면.*옹골"],
+          "severity": "critical"
+        }
+      ],
+      "pass_threshold": 0.70,
+      "scoring_method": "term_coverage"
+    },
+    "mapping_formal_counterexample_to_proof_schema": {
+      "task_type": "mapping_formal_counterexample_to_proof_schema",
+      "required_terms": [
+        {"term": "Heine-Borel", "weight": 2.0, "aliases": ["하이네-보렐"]},
+        {"term": "closed and bounded", "weight": 1.5, "aliases": ["닫히고 유계"]},
+        {"term": "compact", "weight": 1.0, "aliases": ["옹골"]},
+        {"term": "open cover", "weight": 1.0, "aliases": ["열린 덮개"]},
+        {"term": "finite subcover", "weight": 1.0, "aliases": ["유한 부분덮개"]},
+        {"term": "nested intervals", "weight": 1.5, "aliases": ["축소 구간", "bisection"]}
+      ],
+      "misconception_checks": [
+        {
+          "misconception_id": "misuses_heine_borel",
+          "trigger_patterns": ["heine.borel.*일반", "heine.borel.*metric", "닫히고.*유계.*compact(?!.*R\\^n)"],
+          "severity": "moderate"
+        }
+      ],
+      "pass_threshold": 0.70,
+      "scoring_method": "term_coverage"
+    },
+    "recall": {
+      "task_type": "recall",
+      "required_terms": [
+        {"term": "compact", "weight": 1.0, "aliases": ["옹골"]},
+        {"term": "open cover", "weight": 2.0, "aliases": ["열린 덮개"]},
+        {"term": "finite subcover", "weight": 2.0, "aliases": ["유한 부분덮개"]},
+        {"term": "closed", "weight": 1.0, "aliases": ["닫힌", "닫혀"]},
+        {"term": "bounded", "weight": 1.0, "aliases": ["유계"]},
+        {"term": "Heine-Borel", "weight": 1.0, "aliases": ["하이네-보렐"]}
+      ],
+      "misconception_checks": [
+        {
+          "misconception_id": "bounded_implies_compact",
+          "trigger_patterns": ["유계.*compact", "bounded.*compact", "유계이면.*옹골"],
+          "severity": "critical"
+        },
+        {
+          "misconception_id": "misuses_heine_borel",
+          "trigger_patterns": ["heine.borel.*일반", "heine.borel.*metric"],
+          "severity": "moderate"
+        }
+      ],
+      "pass_threshold": 0.50,
+      "scoring_method": "term_coverage"
+    },
+    "misconception_quiz": {
+      "task_type": "misconception_quiz",
+      "required_terms": [],
+      "misconception_checks": [],
+      "pass_threshold": 0.70,
+      "scoring_method": "term_coverage"
+    }
+  },
+  "global_misconception_checks": [
+    {
+      "misconception_id": "bounded_implies_compact",
+      "trigger_patterns": ["유계.*compact", "bounded.*compact", "유계이면.*옹골"],
+      "severity": "critical"
+    },
+    {
+      "misconception_id": "closed_implies_compact",
+      "trigger_patterns": ["닫힌.*compact", "closed.*compact", "닫힌.*옹골"],
+      "severity": "critical"
+    },
+    {
+      "misconception_id": "subset_of_compact_is_compact",
+      "trigger_patterns": ["부분집합.*compact", "subset.*compact.*compact"],
+      "severity": "moderate"
+    },
+    {
+      "misconception_id": "misuses_heine_borel",
+      "trigger_patterns": ["heine.borel.*일반", "heine.borel.*metric", "닫히고.*유계.*compact(?!.*R\\^n)"],
+      "severity": "moderate"
+    },
+    {
+      "misconception_id": "confuses_sequential_compact",
+      "trigger_patterns": ["수렴하는.*부분수열.*compact", "sequential.*compact.*같"],
+      "severity": "minor"
+    }
+  ]
+}
