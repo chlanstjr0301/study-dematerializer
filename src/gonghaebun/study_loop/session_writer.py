@@ -128,6 +128,10 @@ def write_session_artifacts(
     study_md_path: Path,
     grader_type: str = "self",
     grader: object = None,
+    *,
+    confusion_map: object | None = None,
+    mapping_tasks: list | None = None,
+    mapping_results: list | None = None,
 ) -> Path:
     """
     Write all session artifacts and update STUDY.md.
@@ -210,6 +214,16 @@ def write_session_artifacts(
 
     # Write visualization artifacts (MVP3.1)
     write_visualization_artifacts(session, attempt_results, output_dir / "visualization")
+
+    # MVP6 artifacts (written when provided)
+    if confusion_map is not None:
+        (output_dir / "confusion_map.json").write_text(
+            confusion_map.model_dump_json(indent=2), encoding="utf-8",
+        )
+    if mapping_tasks is not None:
+        _write_json(output_dir / "mapping_tasks.json", [t.model_dump() for t in mapping_tasks])
+    if mapping_results is not None:
+        _write_json(output_dir / "mapping_results.json", [r.model_dump(mode="json") for r in mapping_results])
 
     return output_dir
 

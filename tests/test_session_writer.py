@@ -263,6 +263,135 @@ class TestWriteSessionArtifacts:
 
 
 # ---------------------------------------------------------------------------
+# TestMVP6Artifacts
+# ---------------------------------------------------------------------------
+
+
+class TestMVP6Artifacts:
+    """Step 13: confusion_map.json, mapping_tasks.json, mapping_results.json."""
+
+    def _run(self, tmp_path, **kwargs):
+        attempts = [make_attempt()]
+        session = build_study_session(
+            SESSION_ID, CONCEPT_ID, "src.md", attempts, STARTED, ENDED,
+        )
+        output_dir = write_session_artifacts(
+            session=session,
+            attempt_results=attempts,
+            runs_dir=tmp_path / "runs",
+            study_md_path=tmp_path / "STUDY.md",
+            **kwargs,
+        )
+        return output_dir
+
+    def _make_confusion_map(self):
+        from gonghaebun.models.confusion_map import ConfusionMap, MappingEdge, PrerequisiteNode
+        return ConfusionMap(
+            concept_id=CONCEPT_ID,
+            session_id=SESSION_ID,
+            prerequisite_nodes=[PrerequisiteNode(concept_id="metric_space", mastery="unknown")],
+            mapping_edges=[
+                MappingEdge(
+                    from_rep="formal", to_rep="counterexample",
+                    task_type="formal_to_counterexample", passed=False, score=0.3,
+                )
+            ],
+            misconception_tags=["bounded_implies_compact"],
+            next_recall_triggers=["open cover 설명하라"],
+            evidence_snippets=[],
+            last_updated_step="mapping",
+            created_at="2026-05-08T00:00:00+00:00",
+            updated_at="2026-05-08T00:00:00+00:00",
+        )
+
+    def _make_mapping_tasks(self):
+        from gonghaebun.models.mapping_models import MappingTask, MappingTaskType
+        return [
+            MappingTask(
+                task_id=f"{SESSION_ID}_formal_to_counterexample",
+                session_id=SESSION_ID,
+                concept_id=CONCEPT_ID,
+                task_type=MappingTaskType.FORMAL_TO_COUNTEREXAMPLE,
+                prompt="반례를 설명하라",
+                required_terms=["open cover"],
+                grounding_notes="Check formal → CE",
+                source_representations=["formal"],
+                target_representation="counterexample",
+            ),
+        ]
+
+    def _make_mapping_results(self):
+        from gonghaebun.models.mapping_models import MappingResult, MappingTaskType
+        return [
+            MappingResult(
+                task_id=f"{SESSION_ID}_formal_to_counterexample",
+                task_type=MappingTaskType.FORMAL_TO_COUNTEREXAMPLE,
+                learner_response="(0,1) is not compact because...",
+                score=0.3,
+                passed=False,
+                missing_elements=["finite subcover"],
+                incorrect_claims=[],
+                misconception_tags=["bounded_implies_compact"],
+                mapping_failures=["formal_to_counterexample"],
+                feedback="open cover 조건 설명 부족",
+                next_recall_trigger="open cover 설명하라",
+                evaluated_at="2026-05-08T00:00:00+00:00",
+            ),
+        ]
+
+    def test_confusion_map_json_written_when_provided(self, tmp_path):
+        cmap = self._make_confusion_map()
+        output_dir = self._run(tmp_path, confusion_map=cmap)
+        assert (output_dir / "confusion_map.json").exists()
+
+    def test_mapping_tasks_json_written_when_provided(self, tmp_path):
+        tasks = self._make_mapping_tasks()
+        output_dir = self._run(tmp_path, mapping_tasks=tasks)
+        assert (output_dir / "mapping_tasks.json").exists()
+
+    def test_mapping_results_json_written_when_provided(self, tmp_path):
+        results = self._make_mapping_results()
+        output_dir = self._run(tmp_path, mapping_results=results)
+        assert (output_dir / "mapping_results.json").exists()
+
+    def test_new_artifacts_not_written_when_not_provided(self, tmp_path):
+        """Backward compat: no MVP6 args → no MVP6 files."""
+        output_dir = self._run(tmp_path)
+        assert not (output_dir / "confusion_map.json").exists()
+        assert not (output_dir / "mapping_tasks.json").exists()
+        assert not (output_dir / "mapping_results.json").exists()
+
+    def test_new_artifacts_are_valid_json(self, tmp_path):
+        """All 3 artifacts can be loaded and validated."""
+        cmap = self._make_confusion_map()
+        tasks = self._make_mapping_tasks()
+        results = self._make_mapping_results()
+        output_dir = self._run(
+            tmp_path,
+            confusion_map=cmap,
+            mapping_tasks=tasks,
+            mapping_results=results,
+        )
+
+        from gonghaebun.models.confusion_map import ConfusionMap
+        from gonghaebun.models.mapping_models import MappingResult, MappingTask
+
+        loaded_cmap = ConfusionMap.model_validate_json(
+            (output_dir / "confusion_map.json").read_text(encoding="utf-8")
+        )
+        assert loaded_cmap.concept_id == CONCEPT_ID
+
+        raw_tasks = json.loads((output_dir / "mapping_tasks.json").read_text(encoding="utf-8"))
+        loaded_tasks = [MappingTask.model_validate(t) for t in raw_tasks]
+        assert len(loaded_tasks) == 1
+
+        raw_results = json.loads((output_dir / "mapping_results.json").read_text(encoding="utf-8"))
+        loaded_results = [MappingResult.model_validate(r) for r in raw_results]
+        assert len(loaded_results) == 1
+        assert loaded_results[0].passed is False
+
+
+# ---------------------------------------------------------------------------
 # TestValidateStudyMd
 # ---------------------------------------------------------------------------
 
