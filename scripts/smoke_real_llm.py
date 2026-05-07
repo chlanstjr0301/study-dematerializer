@@ -5,12 +5,19 @@ Real-LLM end-to-end smoke test against a running Gonghaebun API server.
 Usage:
     python scripts/smoke_real_llm.py --allow-real-llm
     python scripts/smoke_real_llm.py --allow-real-llm --base-url http://0.0.0.0:8000
+    python scripts/smoke_real_llm.py --allow-real-llm --http-timeout-seconds 600
 
 Requires:
     - --allow-real-llm flag (mandatory, refuses to run without it)
     - Running uvicorn server (does NOT start one automatically)
     - Environment: GONGHAEBUN_LLM_DISABLED=0, GONGHAEBUN_LLM_PROVIDER=openai,
       GONGHAEBUN_LLM_MODEL=gpt-5.5, OPENAI_API_KEY set
+
+Note:
+    Step C (session creation) triggers ~7 OpenAI API calls internally
+    (5x representation gen + 1x misconception check + 1x recall task gen).
+    This can take 60-180+ seconds depending on model latency.
+    Use --http-timeout-seconds 300 or 600 if you see TimeoutError at step C.
 
 Exits 0 if all steps pass, 1 if any fail.
 Requires no third-party libraries — stdlib only.
@@ -23,6 +30,7 @@ from __future__ import annotations
 
 import json
 import os
+import socket
 import sys
 import time
 import urllib.error
@@ -30,30 +38,34 @@ import urllib.request
 from argparse import ArgumentParser
 
 DEFAULT_BASE_URL = "http://127.0.0.1:8000"
+DEFAULT_HTTP_TIMEOUT = 300
 EXPECTED_MODEL = "gpt-5.5"
 CONCEPT_ID = "compactness"
+
+# Set by main(); used by all HTTP helpers.
+_http_timeout: int = DEFAULT_HTTP_TIMEOUT
 
 
 # ---------------------------------------------------------------------------
 # HTTP helpers
 # ---------------------------------------------------------------------------
 
-def http_get(url: str, timeout: int = 30) -> tuple[int, dict]:
+def http_get(url: str) -> tuple[int, dict]:
     """GET request, return (status, parsed JSON body)."""
     req = urllib.request.Request(url, method="GET")
-    with urllib.request.urlopen(req, timeout=timeout) as resp:
+    with urllib.request.urlopen(req, timeout=_http_timeout) as resp:
         body = resp.read().decode("utf-8")
         return resp.status, json.loads(body)
 
 
-def http_post(url: str, body: dict, timeout: int = 60) -> tuple[int, dict]:
+def http_post(url: str, body: dict) -> tuple[int, dict]:
     """POST request with JSON body, return (status, parsed JSON body)."""
     data = json.dumps(body).encode("utf-8")
     req = urllib.request.Request(
         url, data=data, method="POST",
         headers={"Content-Type": "application/json"},
     )
-    with urllib.request.urlopen(req, timeout=timeout) as resp:
+    with urllib.request.urlopen(req, timeout=_http_timeout) as resp:
         resp_body = resp.read().decode("utf-8")
         return resp.status, json.loads(resp_body)
 
@@ -144,7 +156,6 @@ def step_c_create_session(base: str) -> str | None:
     status, data = http_post(
         f"{base}/api/study-session",
         {"concept_id": CONCEPT_ID},
-        timeout=120,  # session creation triggers 7 LLM calls
     )
     if status != 201:
         print(f"  [FAIL] Create session: HTTP {status}")
@@ -189,7 +200,6 @@ def step_e_self_explain_formal(base: str, session_id: str) -> bool:
                 "open cover of K has a finite subcover."
             ),
         },
-        timeout=60,
     )
     if status != 200:
         print(f"  [FAIL] Self-explain (formal): HTTP {status}")
@@ -214,7 +224,6 @@ def step_f_self_explain_proof(base: str, session_id: str) -> bool:
                 "finite subcover via Heine-Borel or sequential compactness."
             ),
         },
-        timeout=60,
     )
     if status != 200:
         print(f"  [FAIL] Self-explain (proof_schema): HTTP {status}")
@@ -253,7 +262,6 @@ def step_h_recall(base: str, session_id: str) -> bool:
                 "sequential compactness in metric spaces."
             ),
         },
-        timeout=60,
     )
     if status != 200:
         print(f"  [FAIL] Recall: HTTP {status}")
@@ -324,6 +332,16 @@ def main() -> int:
         default=DEFAULT_BASE_URL,
         help=f"Base URL of the running server (default: {DEFAULT_BASE_URL})",
     )
+    parser.add_argument(
+        "--http-timeout-seconds",
+        type=int,
+        default=DEFAULT_HTTP_TIMEOUT,
+        help=(
+            f"Timeout for every HTTP request in seconds "
+            f"(default: {DEFAULT_HTTP_TIMEOUT}). "
+            f"Step C (session creation) triggers ~7 LLM calls and may need 120-300s."
+        ),
+    )
     args = parser.parse_args()
 
     # Windows UTF-8 output
@@ -337,10 +355,14 @@ def main() -> int:
         print("Usage: python scripts/smoke_real_llm.py --allow-real-llm")
         return 1
 
+    global _http_timeout
+    _http_timeout = args.http_timeout_seconds
+
     base = args.base_url.rstrip("/")
 
     print(f"Real LLM Smoke Test: {base}")
     print(f"Concept: {CONCEPT_ID}")
+    print(f"HTTP timeout: {_http_timeout}s per request")
     print()
 
     # Pre-flight
@@ -404,6 +426,15 @@ def main() -> int:
         print(f"\n=== Real LLM Smoke Test FAILED ===")
         print(f"Failed at: {step_name}")
         print(f"Exception: {type(e).__name__} (HTTP {e.code})")
+        return 1
+    except (TimeoutError, socket.timeout, urllib.error.URLError) as e:
+        print(f"\n=== Real LLM Smoke Test FAILED ===")
+        print(f"Failed at: {step_name}")
+        print(f"Exception: {type(e).__name__}")
+        print(f"The server did not respond within {_http_timeout}s.")
+        if "Create session" in step_name:
+            print("Step C triggers ~7 LLM API calls and can take 120-300+ seconds.")
+        print(f"Try: python scripts/smoke_real_llm.py --allow-real-llm --http-timeout-seconds 600")
         return 1
     except Exception as e:
         print(f"\n=== Real LLM Smoke Test FAILED ===")
