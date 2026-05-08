@@ -6,6 +6,8 @@ Run with:
 """
 from __future__ import annotations
 
+import logging
+import sys
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -13,6 +15,16 @@ from fastapi.middleware.cors import CORSMiddleware
 
 import apps.api.config as config
 from apps.api.routers import bank, banks, compiler, concepts, health, mapping, project, sessions, sources, study_md, study_session, visualization
+
+# ---------------------------------------------------------------------------
+# Logging setup — ensures gonghaebun.* loggers output to stderr.
+# Uvicorn captures stderr → journalctl when run under systemd.
+# ---------------------------------------------------------------------------
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(name)s %(levelname)s %(message)s",
+    stream=sys.stderr,
+)
 
 # Module-level so tests can monkeypatch before calling create_app()
 _DIST = Path(__file__).parent.parent / "web" / "dist"

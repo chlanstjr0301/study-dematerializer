@@ -404,8 +404,24 @@ def tutor_respond(
     # Classify learning task early (used by both LLM and fallback paths)
     learning_task = classify_learning_task(message)
 
+    llm_disabled_env = os.getenv("GONGHAEBUN_LLM_DISABLED", "1")
+    llm_model = os.getenv("GONGHAEBUN_LLM_MODEL", "gpt-5.5")
+    api_key_present = bool(os.getenv("OPENAI_API_KEY"))
+
+    logger.warning(
+        "tutor_respond_enter",
+        extra={
+            "concept_id": concept_id,
+            "message_preview": message[:80],
+            "llm_disabled_env": llm_disabled_env,
+            "openai_model": llm_model,
+            "api_key_present": api_key_present,
+            "learning_task": learning_task,
+        },
+    )
+
     # Fast path: LLM disabled — try compactness fallback
-    if os.getenv("GONGHAEBUN_LLM_DISABLED", "1") == "1":
+    if llm_disabled_env == "1":
         # Still attempt deterministic fallback for compactness
         from apps.api.services.rag_context_service import retrieve_context
         context_snippets = retrieve_context(
@@ -419,12 +435,11 @@ def tutor_respond(
         )
         if fallback:
             return fallback
+        logger.warning(
+            "tutor_return_none",
+            extra={"reason": "llm_disabled_no_compactness_match"},
+        )
         return None
-
-    logger.info(
-        "tutor_overlay_attempt",
-        extra={"concept_id": concept_id, "message_len": len(message)},
-    )
 
     try:
         # 1. Learning task already classified above
@@ -453,6 +468,15 @@ def tutor_respond(
         )
         rag_used = len(context_snippets) > 0
 
+        logger.warning(
+            "tutor_context_retrieved",
+            extra={
+                "concept_id": concept_id,
+                "retrieved_context_count": len(context_snippets),
+                "top_source_ids": [s.source_id for s in context_snippets[:3]],
+            },
+        )
+
         # 4. Build prompt
         template = _load_tutor_prompt()
         system_prompt, user_msg = _build_prompt(
@@ -463,20 +487,29 @@ def tutor_respond(
         from gonghaebun.llm.factory import get_llm_client
         client = get_llm_client()
 
+        logger.warning(
+            "tutor_llm_call_attempt",
+            extra={
+                "model": llm_model,
+                "prompt_len": len(system_prompt),
+                "user_msg_len": len(user_msg),
+            },
+        )
+
         start_time = time.time()
         result = client.complete_structured(system_prompt, user_msg, TUTOR_OUTPUT_SCHEMA)
         latency_ms = int((time.time() - start_time) * 1000)
 
-        logger.info(
-            "llm_call_success",
-            extra={"concept_id": concept_id, "latency_ms": latency_ms},
+        logger.warning(
+            "tutor_llm_call_success",
+            extra={"model": llm_model, "elapsed_ms": latency_ms},
         )
 
         # 6. Parse response
         confidence = result.get("confidence", 0.0)
         if confidence < 0.3:
-            logger.info(
-                "tutor_overlay_low_confidence",
+            logger.warning(
+                "tutor_low_confidence",
                 extra={"concept_id": concept_id, "confidence": confidence},
             )
             # Try compactness fallback before returning None
@@ -485,6 +518,10 @@ def tutor_respond(
             )
             if fallback:
                 return fallback
+            logger.warning(
+                "tutor_return_none",
+                extra={"reason": "low_confidence_no_compactness_match", "confidence": confidence},
+            )
             return None
 
         # Build study_update_candidate if present
@@ -527,10 +564,12 @@ def tutor_respond(
 
     except Exception as e:
         logger.warning(
-            "tutor_overlay_llm_error",
+            "tutor_llm_call_error",
             extra={
-                "error": str(e),
+                "model": llm_model,
                 "error_class": type(e).__name__,
+                "error_repr": repr(e)[:300],
+                "error_message": str(e)[:200],
                 "concept_id": concept_id,
                 "message_preview": message[:80],
             },
@@ -551,4 +590,8 @@ def tutor_respond(
         )
         if fallback:
             return fallback
+        logger.warning(
+            "tutor_return_none",
+            extra={"reason": "llm_error_no_compactness_match", "error_class": type(e).__name__},
+        )
         return None

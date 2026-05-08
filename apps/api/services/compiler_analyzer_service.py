@@ -283,8 +283,9 @@ def _infer_gap(message: str) -> str:
 
 
 import logging as _logging
+import os as _os
 
-_tutor_logger = _logging.getLogger("gonghaebun.tutor")
+_analyzer_logger = _logging.getLogger("gonghaebun.compiler.analyzer")
 
 # Patterns that indicate a question-like message (should try tutor overlay)
 _QUESTION_LIKE_RE = __import__("re").compile(
@@ -365,6 +366,14 @@ def analyze_message(
         resp["render_mode"] = "card"
         return resp
 
+    _analyzer_logger.warning(
+        "compiler_analyze_received",
+        extra={
+            "message_preview": message[:80],
+            "recent_messages_count": len(recent_messages) if recent_messages else 0,
+        },
+    )
+
     # 0. Classify intent first (conversation-first)
     intent_result = classify_intent(message, recent_messages)
     intent = intent_result["intent"]
@@ -380,8 +389,28 @@ def analyze_message(
         return resp
 
     # LLM Tutor overlay: for question-like messages, try LLM first
-    if _is_question_like(message):
+    question_like = _is_question_like(message)
+    llm_disabled_env = _os.getenv("GONGHAEBUN_LLM_DISABLED", "1")
+
+    _analyzer_logger.warning(
+        "tutor_overlay_check",
+        extra={
+            "question_like": question_like,
+            "intent": intent,
+            "concept_id": intent_concept_id,
+            "llm_disabled_env": llm_disabled_env,
+        },
+    )
+
+    if question_like:
         try:
+            _analyzer_logger.warning(
+                "tutor_overlay_attempt",
+                extra={
+                    "concept_id": intent_concept_id,
+                    "message_preview": message[:80],
+                },
+            )
             from apps.api.services.tutor_orchestrator_service import tutor_respond
             tutor_result = tutor_respond(
                 message=message,
@@ -390,15 +419,37 @@ def analyze_message(
                 source_id=source_id,
             )
             if tutor_result and tutor_result.confidence >= 0.5:
-                _tutor_logger.info(
-                    "tutor_overlay_success_in_analyzer",
-                    extra={"concept_id": tutor_result.primary_concept},
+                _analyzer_logger.warning(
+                    "tutor_overlay_success",
+                    extra={
+                        "concept_id": tutor_result.primary_concept,
+                        "learning_task": tutor_result.learning_task,
+                        "llm_used": tutor_result.llm_used,
+                        "rag_used": tutor_result.rag_used,
+                        "confidence": tutor_result.confidence,
+                        "direct_answer_len": len(tutor_result.direct_answer),
+                    },
                 )
                 return _build_tutor_response(tutor_result)
+            else:
+                _analyzer_logger.warning(
+                    "tutor_overlay_none",
+                    extra={
+                        "reason": (
+                            f"low_confidence={tutor_result.confidence}"
+                            if tutor_result
+                            else "tutor_returned_none"
+                        ),
+                    },
+                )
         except Exception as e:
-            _tutor_logger.warning(
-                "tutor_overlay_fallback_in_analyzer",
-                extra={"error": str(e)},
+            _analyzer_logger.warning(
+                "tutor_overlay_exception",
+                extra={
+                    "error_class": type(e).__name__,
+                    "error_repr": repr(e)[:200],
+                    "message_preview": message[:80],
+                },
             )
 
     # Generate direct answer for conversational intents
@@ -473,6 +524,11 @@ def analyze_message(
         render_mode = "bubble"
     else:
         render_mode = "card"
+
+    _analyzer_logger.warning(
+        "deterministic_card_fallback",
+        extra={"concept_id": concept_id, "intent": intent},
+    )
 
     return {
         "language": "ko",

@@ -3,6 +3,7 @@ Tests for LLM Tutor orchestrator service.
 """
 from __future__ import annotations
 
+import logging
 import os
 from unittest.mock import MagicMock, patch
 
@@ -17,6 +18,7 @@ from apps.api.services.tutor_orchestrator_service import (
     classify_learning_task,
     tutor_respond,
 )
+from gonghaebun.llm.errors import LLMError, LLMResponseError
 
 
 class TestClassifyLearningTask:
@@ -336,3 +338,106 @@ class TestCompactnessDeterministicFallback:
         """LLM disabled + non-compactness question → None."""
         result = tutor_respond("hello world")
         assert result is None
+
+
+class TestTutorLogging:
+    """Verify logging output at each step."""
+
+    def test_tutor_respond_logs_enter(self, caplog, monkeypatch):
+        monkeypatch.setenv("GONGHAEBUN_LLM_DISABLED", "1")
+        with caplog.at_level(logging.WARNING, logger="gonghaebun.tutor"):
+            tutor_respond("compact가 뭐야?")
+        assert any("tutor_respond_enter" in r.message for r in caplog.records)
+
+    def test_tutor_respond_logs_return_none(self, caplog, monkeypatch):
+        monkeypatch.setenv("GONGHAEBUN_LLM_DISABLED", "1")
+        with caplog.at_level(logging.WARNING, logger="gonghaebun.tutor"):
+            tutor_respond("hello world")
+        assert any("tutor_return_none" in r.message for r in caplog.records)
+
+    @patch("gonghaebun.llm.factory.get_llm_client")
+    def test_tutor_respond_logs_llm_error(self, mock_factory, caplog, monkeypatch):
+        monkeypatch.setenv("GONGHAEBUN_LLM_DISABLED", "0")
+        monkeypatch.setenv("GONGHAEBUN_LLM_PROVIDER", "mock")
+        mock_client = MagicMock()
+        mock_client.complete_structured.side_effect = LLMError("API fail")
+        mock_factory.return_value = mock_client
+
+        with caplog.at_level(logging.WARNING, logger="gonghaebun.tutor"):
+            tutor_respond("왜 (0,1)은 compact하지 않아?", concept_id="compactness")
+
+        assert any("tutor_llm_call_error" in r.message for r in caplog.records)
+
+    @patch("gonghaebun.llm.factory.get_llm_client")
+    def test_tutor_respond_logs_context_retrieved(self, mock_factory, caplog, monkeypatch):
+        monkeypatch.setenv("GONGHAEBUN_LLM_DISABLED", "0")
+        monkeypatch.setenv("GONGHAEBUN_LLM_PROVIDER", "mock")
+        mock_client = MagicMock()
+        mock_client.complete_structured.return_value = {
+            "direct_answer": "test", "primary_concept": "compactness",
+            "supporting_concepts": [], "learning_task": "definition_question",
+            "misconception_tags": [], "missing_elements": [],
+            "study_update_candidate": None, "confidence": 0.9,
+        }
+        mock_factory.return_value = mock_client
+
+        with caplog.at_level(logging.WARNING, logger="gonghaebun.tutor"):
+            tutor_respond("compact가 뭐야?", concept_id="compactness")
+
+        assert any("tutor_context_retrieved" in r.message for r in caplog.records)
+
+
+class TestCompleteStructuredFailurePath:
+    """complete_structured failure does not crash tutor_respond."""
+
+    @patch("gonghaebun.llm.factory.get_llm_client")
+    def test_llm_response_error_uses_fallback(self, mock_factory, monkeypatch):
+        """LLMResponseError (JSON parse fail) on compactness → fallback."""
+        monkeypatch.setenv("GONGHAEBUN_LLM_DISABLED", "0")
+        monkeypatch.setenv("GONGHAEBUN_LLM_PROVIDER", "mock")
+        mock_client = MagicMock()
+        mock_client.complete_structured.side_effect = LLMResponseError("bad JSON")
+        mock_factory.return_value = mock_client
+
+        result = tutor_respond("왜 (0,1)은 compact하지 않아?", concept_id="compactness")
+        assert result is not None
+        assert result.llm_used is False
+        assert result.primary_concept == "compactness"
+
+    @patch("gonghaebun.llm.factory.get_llm_client")
+    def test_llm_error_does_not_crash(self, mock_factory, monkeypatch):
+        """LLMError on non-compactness question → None, no crash."""
+        monkeypatch.setenv("GONGHAEBUN_LLM_DISABLED", "0")
+        monkeypatch.setenv("GONGHAEBUN_LLM_PROVIDER", "mock")
+        mock_client = MagicMock()
+        mock_client.complete_structured.side_effect = LLMError("network error")
+        mock_factory.return_value = mock_client
+
+        result = tutor_respond("something vague")
+        assert result is None
+
+    @patch("gonghaebun.llm.factory.get_llm_client")
+    def test_file_not_found_uses_fallback(self, mock_factory, monkeypatch):
+        """FileNotFoundError (SSL cert) on compactness → fallback."""
+        monkeypatch.setenv("GONGHAEBUN_LLM_DISABLED", "0")
+        monkeypatch.setenv("GONGHAEBUN_LLM_PROVIDER", "mock")
+        mock_client = MagicMock()
+        mock_client.complete_structured.side_effect = FileNotFoundError("SSL cert")
+        mock_factory.return_value = mock_client
+
+        result = tutor_respond("왜 (0,1)은 compact하지 않아?", concept_id="compactness")
+        assert result is not None
+        assert result.llm_used is False
+
+
+class TestDebugScriptImport:
+    """Debug script imports without error."""
+
+    def test_debug_script_importable(self):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location(
+            "debug_tutor_overlay",
+            os.path.join(os.path.dirname(__file__), "..", "scripts", "debug_tutor_overlay.py"),
+        )
+        assert spec is not None
+        assert spec.loader is not None

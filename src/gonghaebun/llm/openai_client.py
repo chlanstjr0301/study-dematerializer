@@ -107,10 +107,20 @@ class OpenAIClient(LLMClient):
 
         Strips __fixture__ markers before sending to API.
         Retries on transient errors (429/5xx) up to 2 times with backoff.
+
+        Fallback chain:
+        1. Structured output (json_schema enforcement)
+        2. Plain JSON instruction (if structured fails with non-retryable error)
         """
         clean_user = strip_fixture_marker(user)
+        schema_name = json_schema.get("title", "structured_output")
 
-        def _call():
+        logger.info(
+            "complete_structured_enter model=%s schema_name=%s user_len=%d",
+            self._model, schema_name, len(clean_user),
+        )
+
+        def _call_structured():
             import openai  # noqa: PLC0415
             try:
                 response = self._client.responses.create(
@@ -128,15 +138,61 @@ class OpenAIClient(LLMClient):
                 )
                 return response.output_text
             except openai.APIError as exc:
+                logger.warning(
+                    "complete_structured_api_error model=%s status=%s type=%s",
+                    self._model,
+                    getattr(exc, "status_code", "unknown"),
+                    type(exc).__name__,
+                )
                 raise LLMError(f"OpenAI API error: {exc}") from exc
 
-        raw = self._call_with_retry(_call, method_name="complete_structured")
+        # --- Attempt 1: strict structured output ---
         try:
-            return json.loads(raw)
-        except json.JSONDecodeError as exc:
+            raw = self._call_with_retry(_call_structured, method_name="complete_structured")
+            parsed = json.loads(raw)
+            logger.info("complete_structured_ok model=%s method=structured", self._model)
+            return parsed
+        except (LLMError, json.JSONDecodeError) as structured_exc:
+            logger.warning(
+                "complete_structured_failed model=%s error_class=%s error=%s",
+                self._model, type(structured_exc).__name__, str(structured_exc)[:200],
+            )
+
+        # --- Attempt 2: plain JSON instruction fallback ---
+        logger.warning(
+            "complete_structured_plain_json_fallback model=%s", self._model,
+        )
+        try:
+            json_instruction = (
+                system
+                + "\n\nIMPORTANT: Respond ONLY with a valid JSON object. "
+                "No markdown, no code fences, no extra text."
+            )
+            raw_plain = self._call_with_retry(
+                lambda: self._do_complete(json_instruction, clean_user),
+                method_name="complete_structured_plain_fallback",
+            )
+            # Strip markdown code fences if present
+            text = raw_plain.strip()
+            if text.startswith("```"):
+                text = text.split("\n", 1)[-1]  # remove first line
+                if text.endswith("```"):
+                    text = text[:-3].strip()
+            parsed = json.loads(text)
+            logger.warning(
+                "complete_structured_plain_json_ok model=%s", self._model,
+            )
+            return parsed
+        except (LLMError, json.JSONDecodeError, ValueError) as plain_exc:
+            logger.warning(
+                "complete_structured_plain_json_failed model=%s error_class=%s error=%s",
+                self._model, type(plain_exc).__name__, str(plain_exc)[:200],
+            )
+            # Re-raise the original structured error for caller to handle
             raise LLMResponseError(
-                f"OpenAI structured response is not valid JSON: {raw!r}"
-            ) from exc
+                f"Both structured and plain JSON calls failed. "
+                f"Structured: {structured_exc!r}; Plain: {plain_exc!r}"
+            ) from plain_exc
 
     # --- Private helpers ---
 

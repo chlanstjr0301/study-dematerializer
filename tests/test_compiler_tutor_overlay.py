@@ -172,6 +172,18 @@ class TestCompactnessFallbackInAnalyzer:
         # Should get a direct answer about compactness
         assert result["direct_answer"] is not None
 
+    def test_demo_question_returns_bubble(self):
+        """Full demo question returns bubble render mode, not card."""
+        result = analyze_message(
+            "그럼 (0,1)은 bounded인데 왜 compact하지 않다고 하는 거야? "
+            "open cover 관점에서 설명해줘"
+        )
+        assert result.get("concept_id") != "open_set"
+        assert result["render_mode"] == "bubble"
+        assert result["intent"] == "tutor_response"
+        assert result["direct_answer"] is not None
+        assert "유한 부분덮개" in result["direct_answer"]
+
     def test_finite_subcover_returns_answer(self):
         """finite subcover question gets deterministic answer."""
         result = analyze_message("finite subcover가 뭐야?")
@@ -182,6 +194,22 @@ class TestCompactnessFallbackInAnalyzer:
         """Heine-Borel scope question gets deterministic answer."""
         result = analyze_message("closed and bounded이면 compact 아니야?")
         assert result["direct_answer"] is not None
+
+
+class TestAnalyzerLogging:
+    """Verify analyzer emits structured logs."""
+
+    def test_logs_compiler_analyze_received(self, caplog):
+        import logging
+        with caplog.at_level(logging.WARNING, logger="gonghaebun.compiler.analyzer"):
+            analyze_message("옹골성")
+        assert any("compiler_analyze_received" in r.message for r in caplog.records)
+
+    def test_logs_tutor_overlay_check(self, caplog):
+        import logging
+        with caplog.at_level(logging.WARNING, logger="gonghaebun.compiler.analyzer"):
+            analyze_message("compact가 뭐야?")
+        assert any("tutor_overlay_check" in r.message for r in caplog.records)
 
 
 class TestBackwardCompatibility:
