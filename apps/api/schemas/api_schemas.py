@@ -269,6 +269,14 @@ class RecommendedAction(BaseModel):
     route: str | None = None  # None = inline action, no navigation
 
 
+class StudyUpdateCandidateSchema(BaseModel):
+    concept_id: str | None = None
+    summary: str = ""
+    evidence: list[str] = []
+    misconception_tags: list[str] = []
+    next_recall_tasks: list[str] = []
+
+
 class AnalyzeResponse(BaseModel):
     language: str  # always "ko"
     concept_id: str | None
@@ -282,6 +290,14 @@ class AnalyzeResponse(BaseModel):
     intent: str = "concept_lookup"
     direct_answer: str | None = None
     render_mode: str = "card"  # "card" (full AnalysisCard) | "bubble" (text only)
+    # LLM Tutor overlay fields
+    llm_used: bool = False
+    rag_used: bool = False
+    retrieved_context: list[dict] | None = None
+    learning_task: str | None = None
+    misconception_tags: list[str] | None = None
+    missing_elements: list[str] | None = None
+    study_update_candidate: StudyUpdateCandidateSchema | None = None
 
 
 # ---------------------------------------------------------------------------

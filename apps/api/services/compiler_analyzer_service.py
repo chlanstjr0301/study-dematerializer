@@ -282,6 +282,55 @@ def _infer_gap(message: str) -> str:
 # ---------------------------------------------------------------------------
 
 
+import logging as _logging
+
+_tutor_logger = _logging.getLogger("gonghaebun.tutor")
+
+# Patterns that indicate a question-like message (should try tutor overlay)
+_QUESTION_LIKE_RE = __import__("re").compile(
+    r"(\?|뭐|왜|어떻게|설명|알려|모르|증명|proof|맞아|이해|차이|비교|정리해|기록|태그|STUDY)",
+    __import__("re").IGNORECASE,
+)
+
+
+def _is_question_like(message: str) -> bool:
+    """Return True if message looks like a learning question (should try tutor)."""
+    return bool(_QUESTION_LIKE_RE.search(message))
+
+
+def _build_tutor_response(tutor_result) -> dict:
+    """Convert a TutorResponse into the AnalyzeResponse dict format."""
+    from apps.api.services.compiler_analyzer_service import KOREAN_NAMES
+    concept_id = tutor_result.primary_concept
+    ko_name = KOREAN_NAMES.get(concept_id, concept_id) if concept_id else None
+
+    return {
+        "language": "ko",
+        "concept_id": concept_id,
+        "canonical_name_ko": ko_name,
+        "canonical_name_en": concept_id,
+        "suspected_gap": "",
+        "correction": None,
+        "prerequisite_checks": [],
+        "recommended_actions": [],
+        "representations": None,
+        "intent": "tutor_response",
+        "direct_answer": tutor_result.direct_answer,
+        "render_mode": "bubble",
+        "llm_used": tutor_result.llm_used,
+        "rag_used": tutor_result.rag_used,
+        "retrieved_context": tutor_result.retrieved_context,
+        "learning_task": tutor_result.learning_task,
+        "misconception_tags": tutor_result.misconception_tags,
+        "missing_elements": tutor_result.missing_elements,
+        "study_update_candidate": (
+            tutor_result.study_update_candidate.to_dict()
+            if tutor_result.study_update_candidate
+            else None
+        ),
+    }
+
+
 def _resolve_active_concept(recent_messages: list[str] | None) -> str | None:
     """Find the most recent concept_id from conversation history."""
     if not recent_messages:
@@ -329,6 +378,28 @@ def analyze_message(
         resp["direct_answer"] = direct_answer
         resp["render_mode"] = "bubble"
         return resp
+
+    # LLM Tutor overlay: for question-like messages, try LLM first
+    if _is_question_like(message):
+        try:
+            from apps.api.services.tutor_orchestrator_service import tutor_respond
+            tutor_result = tutor_respond(
+                message=message,
+                recent_messages=recent_messages,
+                concept_id=intent_concept_id,
+                source_id=source_id,
+            )
+            if tutor_result and tutor_result.confidence >= 0.5:
+                _tutor_logger.info(
+                    "tutor_overlay_success_in_analyzer",
+                    extra={"concept_id": tutor_result.primary_concept},
+                )
+                return _build_tutor_response(tutor_result)
+        except Exception as e:
+            _tutor_logger.warning(
+                "tutor_overlay_fallback_in_analyzer",
+                extra={"error": str(e)},
+            )
 
     # Generate direct answer for conversational intents
     direct_answer = generate_direct_answer(intent, intent_concept_id, message, recent_messages)

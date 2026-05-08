@@ -283,6 +283,14 @@ export interface RecommendedAction {
   route: string | null;
 }
 
+export interface StudyUpdateCandidate {
+  concept_id: string | null;
+  summary: string;
+  evidence: string[];
+  misconception_tags: string[];
+  next_recall_tasks: string[];
+}
+
 export interface AnalyzeResponse {
   language: string;
   concept_id: string | null;
@@ -296,6 +304,14 @@ export interface AnalyzeResponse {
   intent: string;
   direct_answer: string | null;
   render_mode: string;  // "card" | "bubble"
+  // LLM Tutor overlay fields
+  llm_used?: boolean;
+  rag_used?: boolean;
+  retrieved_context?: Record<string, unknown>[] | null;
+  learning_task?: string | null;
+  misconception_tags?: string[] | null;
+  missing_elements?: string[] | null;
+  study_update_candidate?: StudyUpdateCandidate | null;
 }
 
 // ---------------------------------------------------------------------------

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { analyzeMessage, getSources } from '../api/client';
-import type { AnalyzeResponse, SourceItem } from '../api/types';
+import type { AnalyzeResponse, SourceItem, StudyUpdateCandidate } from '../api/types';
 
 interface ChatMessage {
   role: 'system' | 'user' | 'assistant';
@@ -136,6 +136,14 @@ export default function ChatCompiler() {
         {messages.map((msg, i) => (
           <div key={i} className={`chat-bubble chat-bubble-${msg.role}`}>
             <div className="chat-bubble-text">{msg.content}</div>
+            {/* Tutor metadata: misconceptions + study update candidate */}
+            {msg.role === 'assistant' && (
+              <TutorMeta
+                misconceptionTags={msg.analysis?.misconception_tags}
+                studyUpdateCandidate={msg.analysis?.study_update_candidate}
+                llmUsed={msg.analysis?.llm_used}
+              />
+            )}
             {msg.analysis && msg.analysis.concept_id && (
               <AnalysisCard
                 analysis={msg.analysis}
@@ -322,6 +330,54 @@ function AnalysisCard({
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+function TutorMeta({
+  misconceptionTags,
+  studyUpdateCandidate,
+  llmUsed,
+}: {
+  misconceptionTags?: string[] | null;
+  studyUpdateCandidate?: StudyUpdateCandidate | null;
+  llmUsed?: boolean;
+}) {
+  const hasMisconceptions = misconceptionTags && misconceptionTags.length > 0;
+  const hasStudyUpdate = studyUpdateCandidate && studyUpdateCandidate.summary;
+
+  if (!hasMisconceptions && !hasStudyUpdate) return null;
+
+  return (
+    <div className="tutor-meta">
+      {hasMisconceptions && (
+        <details className="tutor-meta-section">
+          <summary className="tutor-meta-summary">
+            감지된 오개념 ({misconceptionTags.length})
+          </summary>
+          <ul className="tutor-meta-list">
+            {misconceptionTags.map((tag, i) => (
+              <li key={i}>{tag}</li>
+            ))}
+          </ul>
+        </details>
+      )}
+      {hasStudyUpdate && (
+        <details className="tutor-meta-section">
+          <summary className="tutor-meta-summary">학습 기록 후보</summary>
+          <div className="tutor-meta-update">
+            <p>{studyUpdateCandidate.summary}</p>
+            {studyUpdateCandidate.evidence.length > 0 && (
+              <ul className="tutor-meta-list">
+                {studyUpdateCandidate.evidence.map((ev, i) => (
+                  <li key={i}>{ev}</li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </details>
+      )}
+      {llmUsed && <span className="tutor-meta-badge">LLM</span>}
     </div>
   );
 }
