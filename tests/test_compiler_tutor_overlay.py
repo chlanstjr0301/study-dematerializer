@@ -161,6 +161,29 @@ class TestTutorResponseFields:
         assert result["study_update_candidate"]["concept_id"] == "compactness"
 
 
+class TestCompactnessFallbackInAnalyzer:
+    """Compactness fallback answers surface through analyze_message."""
+
+    def test_why_not_compact_returns_bubble_not_open_set(self):
+        """(0,1) compact question must NOT misroute to open_set card."""
+        result = analyze_message("왜 (0,1)은 compact하지 않아?")
+        # Must NOT return open_set — this was the original bug
+        assert result.get("concept_id") != "open_set"
+        # Should get a direct answer about compactness
+        assert result["direct_answer"] is not None
+
+    def test_finite_subcover_returns_answer(self):
+        """finite subcover question gets deterministic answer."""
+        result = analyze_message("finite subcover가 뭐야?")
+        assert result["direct_answer"] is not None
+        assert "유한" in result["direct_answer"]
+
+    def test_heine_borel_returns_answer(self):
+        """Heine-Borel scope question gets deterministic answer."""
+        result = analyze_message("closed and bounded이면 compact 아니야?")
+        assert result["direct_answer"] is not None
+
+
 class TestBackwardCompatibility:
     """Existing behavior preserved when tutor is disabled."""
 

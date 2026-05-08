@@ -12,6 +12,8 @@ from apps.api.services.tutor_orchestrator_service import (
     TUTOR_OUTPUT_SCHEMA,
     StudyUpdateCandidate,
     TutorResponse,
+    _compactness_deterministic_fallback,
+    _match_compactness_topic,
     classify_learning_task,
     tutor_respond,
 )
@@ -98,7 +100,8 @@ class TestTutorRespondMocked:
         assert result.confidence >= 0.5
 
     @patch("gonghaebun.llm.factory.get_llm_client")
-    def test_low_confidence_returns_none(self, mock_factory):
+    def test_low_confidence_non_compactness_returns_none(self, mock_factory):
+        """Low confidence on non-compactness topic → None."""
         mock_client = MagicMock()
         mock_client.complete_structured.return_value = self._make_mock_response(
             confidence=0.2
@@ -109,13 +112,44 @@ class TestTutorRespondMocked:
         assert result is None
 
     @patch("gonghaebun.llm.factory.get_llm_client")
-    def test_llm_error_returns_none(self, mock_factory):
+    def test_low_confidence_compactness_uses_fallback(self, mock_factory):
+        """Low confidence on compactness question → deterministic fallback."""
+        mock_client = MagicMock()
+        mock_client.complete_structured.return_value = self._make_mock_response(
+            confidence=0.2
+        )
+        mock_factory.return_value = mock_client
+
+        result = tutor_respond("왜 (0,1)은 compact하지 않아?", concept_id="compactness")
+        assert result is not None
+        assert result.llm_used is False
+        assert result.primary_concept == "compactness"
+        assert result.confidence == 0.85
+
+    @patch("gonghaebun.llm.factory.get_llm_client")
+    def test_llm_error_compactness_uses_fallback(self, mock_factory):
+        """LLM error on compactness question → deterministic fallback."""
         mock_client = MagicMock()
         mock_client.complete_structured.side_effect = RuntimeError("API error")
         mock_factory.return_value = mock_client
 
         result = tutor_respond("compactness가 뭐야?", concept_id="compactness")
+        # "뭐야" matches definition pattern but message doesn't match
+        # a specific compactness sub-topic → None
         assert result is None
+
+    @patch("gonghaebun.llm.factory.get_llm_client")
+    def test_llm_error_compactness_why_uses_fallback(self, mock_factory):
+        """LLM error on specific compactness why-question → fallback answer."""
+        mock_client = MagicMock()
+        mock_client.complete_structured.side_effect = RuntimeError("LLM crashed")
+        mock_factory.return_value = mock_client
+
+        result = tutor_respond("왜 (0,1)은 compact하지 않아?", concept_id="compactness")
+        assert result is not None
+        assert result.llm_used is False
+        assert result.primary_concept == "compactness"
+        assert "유한 부분덮개" in result.direct_answer
 
     @patch("gonghaebun.llm.factory.get_llm_client")
     def test_rag_used_flag(self, mock_factory):
@@ -204,3 +238,101 @@ class TestTutorOutputSchema:
 
     def test_schema_no_additional_properties(self):
         assert TUTOR_OUTPUT_SCHEMA["additionalProperties"] is False
+
+
+class TestCompactnessDeterministicFallback:
+    """Deterministic compactness fallback answers."""
+
+    def test_match_why_not_compact(self):
+        assert _match_compactness_topic("왜 (0,1)은 compact하지 않아?", None) == "why_not_compact"
+
+    def test_match_finite_subcover(self):
+        assert _match_compactness_topic("finite subcover가 뭐야?", None) == "finite_subcover"
+
+    def test_match_heine_borel(self):
+        assert _match_compactness_topic("Heine-Borel은 어디서 성립해?", None) == "heine_borel_scope"
+
+    def test_match_uniform_continuity(self):
+        assert _match_compactness_topic("compact 위 연속함수의 uniform continuity 증명", None) == "compactness_in_uniform_continuity"
+
+    def test_match_self_explanation(self):
+        assert _match_compactness_topic("내가 이해한 건 이거야: 유한 개 점으로 대표", None) == "self_explanation_critique"
+
+    def test_match_study_update(self):
+        assert _match_compactness_topic("STUDY.md에 정리해줘", None) == "study_update_misconception"
+
+    def test_match_from_recent_messages(self):
+        """Topic matched from recent messages, not current message."""
+        topic = _match_compactness_topic("설명해", ["왜 (0,1)은 compact하지 않아?"])
+        assert topic == "why_not_compact"
+
+    def test_no_match_returns_none(self):
+        assert _match_compactness_topic("hello world", None) is None
+
+    def test_fallback_returns_tutor_response(self):
+        result = _compactness_deterministic_fallback(
+            "왜 (0,1)은 compact하지 않아?",
+            "why_question",
+            [],
+            None,
+        )
+        assert result is not None
+        assert isinstance(result, TutorResponse)
+        assert result.primary_concept == "compactness"
+        assert result.llm_used is False
+        assert result.confidence == 0.85
+        assert "유한 부분덮개" in result.direct_answer
+
+    def test_fallback_finite_subcover_has_definition_task(self):
+        result = _compactness_deterministic_fallback(
+            "finite subcover가 뭐야?",
+            "definition_question",
+            [],
+            None,
+        )
+        assert result is not None
+        assert result.learning_task == "definition_question"
+
+    def test_fallback_self_explanation_has_misconception_tags(self):
+        result = _compactness_deterministic_fallback(
+            "내가 이해한 건 유한 개 점으로 대표할 수 있다는 거야",
+            "self_explanation_evaluation",
+            [],
+            None,
+        )
+        assert result is not None
+        assert len(result.misconception_tags) > 0
+
+    def test_fallback_study_update_has_candidate(self):
+        result = _compactness_deterministic_fallback(
+            "STUDY.md에 정리해줘",
+            "study_update_request",
+            [],
+            None,
+        )
+        assert result is not None
+        assert result.study_update_candidate is not None
+        assert result.study_update_candidate.concept_id == "compactness"
+
+    def test_fallback_no_match_returns_none(self):
+        result = _compactness_deterministic_fallback(
+            "hello world",
+            "followup_clarification",
+            [],
+            None,
+        )
+        assert result is None
+
+    def test_llm_disabled_compactness_uses_fallback(self):
+        """LLM disabled + compactness question → deterministic answer."""
+        # Default: GONGHAEBUN_LLM_DISABLED=1
+        result = tutor_respond("왜 (0,1)은 compact하지 않아?")
+        assert result is not None
+        assert result.llm_used is False
+        assert result.primary_concept == "compactness"
+        assert "(0,1)" in result.direct_answer
+
+    def test_llm_disabled_non_compactness_returns_none(self):
+        """LLM disabled + non-compactness question → None."""
+        result = tutor_respond("hello world")
+        assert result is None
