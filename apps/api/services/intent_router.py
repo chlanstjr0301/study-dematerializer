@@ -97,6 +97,11 @@ def _detect_concepts_in_message(message: str) -> list[str]:
 # Intent patterns
 # ---------------------------------------------------------------------------
 
+_GREETING_PATTERNS = [
+    r"^안녕", r"^하이$", r"^헬로", r"^반가", r"^hi$", r"^hello",
+]
+_GREETING_RE = re.compile("|".join(_GREETING_PATTERNS), re.IGNORECASE)
+
 _EQUIVALENCE_PATTERNS = [
     r"이야\??$", r"인가\??$", r"인가요\??$", r"이에요\??$", r"맞아\??$",
     r"같은\s*(건|거)", r"같나요", r"같은가요",
@@ -127,9 +132,9 @@ def _has_cross_language_aliases(message: str, concepts: list[str]) -> bool:
 
 
 _DEFINITION_PATTERNS = [
-    r"뭐야", r"뭐지", r"뭐예요", r"뭐에요", r"무엇",
+    r"뭐야", r"뭐지", r"뭐예요", r"뭐에요", r"뭐임", r"뭐냐", r"뭘까", r"무엇",
     r"무슨\s*(뜻|의미)", r"정의", r"what\s+is", r"define",
-    r"설명해", r"알려줘", r"알려\s*주",
+    r"설명해", r"설명을?\s*해", r"설명\s*좀", r"알려줘", r"알려\s*주",
 ]
 _DEFINITION_RE = re.compile("|".join(_DEFINITION_PATTERNS), re.IGNORECASE)
 
@@ -144,6 +149,7 @@ _FOLLOWUP_PATTERNS = [
     r"그게\s*맞", r"맞냐", r"맞아\?", r"아니야\?",
     r"다시\s*(설명|말)", r"제대로", r"좀\s*더",
     r"왜\??$", r"왜요\??$",
+    r"뭐냐고", r"뭐라고", r"모르겠는데", r"더\s*자세히",
 ]
 _FOLLOWUP_RE = re.compile("|".join(_FOLLOWUP_PATTERNS), re.IGNORECASE)
 
@@ -178,6 +184,11 @@ def classify_intent(
         }
     """
     msg = message.strip()
+
+    # 0. Greeting (check BEFORE concept detection)
+    if _GREETING_RE.search(msg):
+        return {"intent": "greeting", "concept_id": None, "all_concepts": []}
+
     concepts = _detect_concepts_in_message(msg)
     primary_concept = concepts[0] if concepts else None
 
@@ -200,11 +211,12 @@ def classify_intent(
     if len(concepts) >= 2 and _DIFFERENCE_RE.search(msg):
         return {"intent": "difference_question", "concept_id": primary_concept, "all_concepts": concepts}
 
-    # 5. Definition question
+    # 5. Definition question (concept found in current message)
     if primary_concept and _DEFINITION_RE.search(msg):
         return {"intent": "definition_question", "concept_id": primary_concept, "all_concepts": concepts}
 
     # 6. Followup repair (no concept but repair cue + recent context)
+    #    Checked BEFORE definition-from-context to handle "뭐냐고", "다시 설명" etc.
     if not primary_concept and _FOLLOWUP_RE.search(msg) and recent_messages:
         # Try to recover concept from recent messages
         for prev in reversed(recent_messages):
@@ -217,7 +229,19 @@ def classify_intent(
                 }
         return {"intent": "followup_repair", "concept_id": None, "all_concepts": []}
 
-    # 7. Pure concept lookup (alias found, no special intent pattern)
+    # 7. Definition question without concept in message → resolve from context
+    #    (after followup check so "뭐냐고" is handled as followup, not definition)
+    if not primary_concept and _DEFINITION_RE.search(msg) and recent_messages:
+        for prev in reversed(recent_messages):
+            prev_concepts = _detect_concepts_in_message(prev)
+            if prev_concepts:
+                return {
+                    "intent": "definition_question",
+                    "concept_id": prev_concepts[0],
+                    "all_concepts": prev_concepts,
+                }
+
+    # 8. Pure concept lookup (alias found, no special intent pattern)
     if primary_concept:
         return {"intent": "concept_lookup", "concept_id": primary_concept, "all_concepts": concepts}
 
@@ -266,6 +290,13 @@ def generate_direct_answer(
     Generate a Korean direct answer for conversational intents.
     Returns None for concept_lookup / start_* / unsupported (handled by existing flow).
     """
+    if intent == "greeting":
+        return (
+            "안녕하세요! 공해분입니다. "
+            "개념 이름이나 질문을 입력하면 학습을 도와드릴게요. "
+            "예: \"옹골성이 뭐야?\", \"compactness 공부 시작\""
+        )
+
     if intent == "alias_equivalence_question" and concept_id:
         concept = CONCEPTS.get(concept_id)
         if not concept:

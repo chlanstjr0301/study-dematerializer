@@ -100,8 +100,73 @@ class TestClassifyIntent:
         assert result["concept_id"] == "uniform_continuity"
 
 
+class TestGreetingIntent:
+    """Test greeting detection (new)."""
+
+    def test_안녕_greeting(self):
+        result = classify_intent("안녕")
+        assert result["intent"] == "greeting"
+        assert result["concept_id"] is None
+
+    def test_하이_greeting(self):
+        result = classify_intent("하이")
+        assert result["intent"] == "greeting"
+        assert result["concept_id"] is None
+
+    def test_안녕하세요_greeting(self):
+        result = classify_intent("안녕하세요")
+        assert result["intent"] == "greeting"
+
+    def test_hello_greeting(self):
+        result = classify_intent("hello")
+        assert result["intent"] == "greeting"
+
+
+class TestExpandedDefinitionPatterns:
+    """Test new definition patterns: 뭐임, 뭐냐."""
+
+    def test_뭐임_definition(self):
+        result = classify_intent("compactness가 뭐임")
+        assert result["intent"] == "definition_question"
+        assert result["concept_id"] == "compactness"
+
+    def test_뭐냐_definition(self):
+        result = classify_intent("옹골성이 뭐냐")
+        assert result["intent"] == "definition_question"
+        assert result["concept_id"] == "compactness"
+
+    def test_설명을_해봐_with_concept(self):
+        result = classify_intent("compactness 설명을 해봐")
+        assert result["intent"] == "definition_question"
+        assert result["concept_id"] == "compactness"
+
+    def test_설명을_해봐_without_concept_with_context(self):
+        result = classify_intent("설명을 해봐", recent_messages=["compactness"])
+        assert result["intent"] == "definition_question"
+        assert result["concept_id"] == "compactness"
+
+
+class TestExpandedFollowupPatterns:
+    """Test new followup patterns: 뭐냐고, 모르겠는데."""
+
+    def test_뭐냐고_followup(self):
+        result = classify_intent("뭐냐고", recent_messages=["compactness가 뭐야?"])
+        assert result["intent"] == "followup_repair"
+        assert result["concept_id"] == "compactness"
+
+    def test_모르겠는데_followup(self):
+        result = classify_intent("모르겠는데", recent_messages=["연결성이 뭐야?"])
+        assert result["intent"] == "followup_repair"
+        assert result["concept_id"] == "connectedness"
+
+
 class TestGenerateDirectAnswer:
     """Test Korean direct answer generation."""
+
+    def test_greeting_answer(self):
+        answer = generate_direct_answer("greeting", None, "안녕")
+        assert answer is not None
+        assert "공해분" in answer
 
     def test_alias_equivalence_answer(self):
         answer = generate_direct_answer(

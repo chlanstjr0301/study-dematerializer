@@ -282,6 +282,20 @@ def _infer_gap(message: str) -> str:
 # ---------------------------------------------------------------------------
 
 
+def _resolve_active_concept(recent_messages: list[str] | None) -> str | None:
+    """Find the most recent concept_id from conversation history."""
+    if not recent_messages:
+        return None
+    for prev in reversed(recent_messages):
+        scores = _score_concepts(prev)
+        if scores:
+            return max(scores, key=scores.get)  # type: ignore[arg-type]
+        cid, _ = _fuzzy_match(prev)
+        if cid:
+            return cid
+    return None
+
+
 def analyze_message(
     message: str,
     source_id: str | None = None,
@@ -299,12 +313,22 @@ def analyze_message(
         resp = _no_match_response(correction=None)
         resp["intent"] = "unsupported"
         resp["direct_answer"] = None
+        resp["render_mode"] = "card"
         return resp
 
     # 0. Classify intent first (conversation-first)
     intent_result = classify_intent(message, recent_messages)
     intent = intent_result["intent"]
     intent_concept_id = intent_result["concept_id"]
+
+    # Greeting → immediate bubble response (no concept search needed)
+    if intent == "greeting":
+        direct_answer = generate_direct_answer(intent, None, message, recent_messages)
+        resp = _no_match_response(correction=None)
+        resp["intent"] = "greeting"
+        resp["direct_answer"] = direct_answer
+        resp["render_mode"] = "bubble"
+        return resp
 
     # Generate direct answer for conversational intents
     direct_answer = generate_direct_answer(intent, intent_concept_id, message, recent_messages)
@@ -327,6 +351,7 @@ def analyze_message(
         resp = _no_match_response(correction=None)
         resp["intent"] = intent
         resp["direct_answer"] = direct_answer
+        resp["render_mode"] = "bubble" if direct_answer else "card"
         return resp
 
     # 3. Build response
@@ -372,6 +397,12 @@ def analyze_message(
         },
     ]
 
+    # Determine render mode: bubble for direct-answer intents, card for concept_lookup
+    if intent in ("definition_question", "alias_equivalence_question", "followup_repair") and direct_answer:
+        render_mode = "bubble"
+    else:
+        render_mode = "card"
+
     return {
         "language": "ko",
         "concept_id": concept_id,
@@ -384,6 +415,7 @@ def analyze_message(
         "representations": representations,
         "intent": intent,
         "direct_answer": direct_answer,
+        "render_mode": render_mode,
     }
 
 

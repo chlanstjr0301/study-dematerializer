@@ -295,6 +295,7 @@ export interface AnalyzeResponse {
   representations: Record<string, string> | null;
   intent: string;
   direct_answer: string | null;
+  render_mode: string;  // "card" | "bubble"
 }
 
 // ---------------------------------------------------------------------------

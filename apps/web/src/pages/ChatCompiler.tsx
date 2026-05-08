@@ -72,18 +72,22 @@ export default function ChatCompiler() {
           ? `${res.canonical_name_ko} ${res.canonical_name_en}`
           : '해당 개념을 찾을 수 없습니다.';
 
+      // render_mode="bubble" → text only (no card)
+      // render_mode="card" → show full AnalysisCard
+      const isBubbleOnly = res.render_mode === 'bubble';
+
       // Suppress duplicate concept card if same concept as previous response
       const prevAssistant = [...messages].reverse().find(m => m.role === 'assistant');
       const isDuplicateConcept = res.concept_id
         && prevAssistant?.analysis?.concept_id === res.concept_id
-        && res.direct_answer;  // Only suppress when direct answer is provided
+        && res.direct_answer;
 
       setMessages(prev => [
         ...prev,
         {
           role: 'assistant',
           content: bubbleText,
-          analysis: isDuplicateConcept ? undefined : res,
+          analysis: (isBubbleOnly || isDuplicateConcept) ? undefined : res,
         },
       ]);
     } catch (e: unknown) {

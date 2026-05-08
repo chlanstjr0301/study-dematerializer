@@ -281,6 +281,7 @@ class AnalyzeResponse(BaseModel):
     representations: dict[str, str] | None = None
     intent: str = "concept_lookup"
     direct_answer: str | None = None
+    render_mode: str = "card"  # "card" (full AnalysisCard) | "bubble" (text only)
 
 
 # ---------------------------------------------------------------------------
