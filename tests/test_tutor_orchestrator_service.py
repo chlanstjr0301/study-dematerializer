@@ -304,10 +304,34 @@ class TestCompactnessDeterministicFallback:
     def test_match_study_update(self):
         assert _match_compactness_topic("STUDY.md에 정리해줘", None) == "study_update_misconception"
 
-    def test_match_from_recent_messages(self):
-        """Topic matched from recent messages, not current message."""
+    def test_match_from_recent_messages_vague_followup(self):
+        """Vague follow-up uses recent messages for topic resolution."""
         topic = _match_compactness_topic("설명해", ["왜 (0,1)은 compact하지 않아?"])
         assert topic == "why_not_compact"
+
+    def test_current_message_overrides_recent_context(self):
+        """Clear current message dominates recent_messages — the core bug fix."""
+        topic = _match_compactness_topic(
+            "finite subcover가 뭐야?",
+            ["왜 (0,1)은 compact하지 않아?"],
+        )
+        assert topic == "finite_subcover"  # NOT why_not_compact
+
+    def test_heine_borel_overrides_why_not_compact(self):
+        """heine_borel beats why_not_compact when closed/bounded wording present."""
+        topic = _match_compactness_topic(
+            "R에서는 compact가 closed and bounded랑 같다고 배웠는데 일반 metric space에서도?",
+            ["왜 (0,1)은 compact하지 않아?"],
+        )
+        assert topic == "heine_borel_scope"
+
+    def test_self_explanation_override_beats_study_update(self):
+        """'내가 이해한' override beats study_update even with '정리해줘'."""
+        topic = _match_compactness_topic(
+            "내가 이해한 건 이거야. 틀린 부분은 오개념 태그로 정리해줘.",
+            None,
+        )
+        assert topic == "self_explanation_critique"
 
     def test_no_match_returns_none(self):
         assert _match_compactness_topic("hello world", None) is None

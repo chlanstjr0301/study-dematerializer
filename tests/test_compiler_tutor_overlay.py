@@ -280,6 +280,60 @@ class TestAnalyzerLogging:
         assert any("tutor_overlay_check" in r.message for r in caplog.records)
 
 
+class TestMultiTurnCompactnessTopicRouting:
+    """Regression: later questions must NOT repeat the (0,1) answer.
+
+    Simulates a conversation where the first question was about (0,1)
+    non-compactness, and subsequent questions about different sub-topics
+    must each get their own answer.
+    """
+
+    PRIOR_CONTEXT = [
+        "(0,1)은 bounded인데 왜 compact하지 않다고 하는 거야? open cover 관점에서 설명해줘"
+    ]
+
+    def test_finite_subcover_not_why_not_compact(self):
+        """Test A: finite subcover question gets its own answer, not (0,1)."""
+        result = analyze_message(
+            "finite subcover가 그냥 열린집합 몇 개만 골라서 덮는다는 뜻인지 헷갈려. "
+            "원래 open cover에서 골라야 한다는 조건이 왜 중요한지 예시와 함께 설명해줘.",
+            recent_messages=self.PRIOR_CONTEXT,
+        )
+        assert result["concept_id"] == "compactness"
+        assert result["render_mode"] == "bubble"
+        da = result["direct_answer"]
+        assert "원래" in da or "주어진 덮개" in da
+        assert "유한 부분덮개" in da
+        # Must NOT primarily repeat (0,1) answer
+        assert not da.startswith("$(0,1)$")
+
+    def test_heine_borel_not_why_not_compact(self):
+        """Test B: Heine-Borel scope question gets its own answer."""
+        result = analyze_message(
+            "R에서는 compact가 closed and bounded랑 같다고 배웠는데, "
+            "일반 metric space에서도 closed and bounded이면 compact라고 해도 돼?",
+            recent_messages=self.PRIOR_CONTEXT,
+        )
+        da = result["direct_answer"]
+        assert "Heine-Borel" in da or "\\mathbb{R}" in da
+        assert "일반 거리 공간" in da or "일반" in da
+        assert not da.startswith("$(0,1)$")
+
+    def test_self_explanation_not_why_not_compact(self):
+        """Test C: self-explanation critique gets misconception_tags."""
+        result = analyze_message(
+            "내가 이해한 건 이거야: compact하다는 건 집합 안에 점이 무한히 많아도 "
+            "결국 유한 개의 점만 대표로 보면 전체 구조를 알 수 있다는 뜻이다. "
+            "이 설명이 맞는지 평가하고, 틀린 부분은 오개념 태그로 정리해줘.",
+            recent_messages=self.PRIOR_CONTEXT,
+        )
+        da = result["direct_answer"]
+        assert result["learning_task"] == "self_explanation_evaluation"
+        assert "confuses_finite_subcover_with_finite_point_representation" in result["misconception_tags"]
+        assert "열린 집합" in da or "부분덮개" in da
+        assert not da.startswith("$(0,1)$")
+
+
 class TestBackwardCompatibility:
     """Existing behavior preserved when tutor is disabled."""
 

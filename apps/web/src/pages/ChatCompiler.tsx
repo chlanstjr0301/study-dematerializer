@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { analyzeMessage, getSources } from '../api/client';
 import type { AnalyzeResponse, SourceItem, StudyUpdateCandidate } from '../api/types';
+import RichMathText from '../components/common/RichMathText';
 
 interface ChatMessage {
   role: 'system' | 'user' | 'assistant';
@@ -72,22 +73,14 @@ export default function ChatCompiler() {
           ? `${res.canonical_name_ko} ${res.canonical_name_en}`
           : '해당 개념을 찾을 수 없습니다.';
 
-      // render_mode="bubble" → text only (no card)
-      // render_mode="card" → show full AnalysisCard
-      const isBubbleOnly = res.render_mode === 'bubble';
-
-      // Suppress duplicate concept card if same concept as previous response
-      const prevAssistant = [...messages].reverse().find(m => m.role === 'assistant');
-      const isDuplicateConcept = res.concept_id
-        && prevAssistant?.analysis?.concept_id === res.concept_id
-        && res.direct_answer;
-
+      // Always store analysis for TutorMeta (misconceptions, study updates).
+      // Card vs bubble visibility is controlled by render_mode in the render.
       setMessages(prev => [
         ...prev,
         {
           role: 'assistant',
           content: bubbleText,
-          analysis: (isBubbleOnly || isDuplicateConcept) ? undefined : res,
+          analysis: res,
         },
       ]);
     } catch (e: unknown) {
@@ -135,7 +128,11 @@ export default function ChatCompiler() {
 
         {messages.map((msg, i) => (
           <div key={i} className={`chat-bubble chat-bubble-${msg.role}`}>
-            <div className="chat-bubble-text">{msg.content}</div>
+            {msg.role === 'assistant' ? (
+              <RichMathText className="chat-bubble-text">{msg.content}</RichMathText>
+            ) : (
+              <div className="chat-bubble-text">{msg.content}</div>
+            )}
             {/* Tutor metadata: misconceptions + study update candidate */}
             {msg.role === 'assistant' && (
               <TutorMeta
@@ -144,7 +141,7 @@ export default function ChatCompiler() {
                 llmUsed={msg.analysis?.llm_used}
               />
             )}
-            {msg.analysis && msg.analysis.concept_id && (
+            {msg.analysis && msg.analysis.concept_id && msg.analysis.render_mode === 'card' && (
               <AnalysisCard
                 analysis={msg.analysis}
                 expanded={expanded}
@@ -153,7 +150,7 @@ export default function ChatCompiler() {
                 onConceptClick={handleSend}
               />
             )}
-            {msg.analysis && !msg.analysis.concept_id && (
+            {msg.analysis && !msg.analysis.concept_id && msg.analysis.render_mode === 'card' && (
               <NoMatchCard onConceptClick={handleSend} />
             )}
           </div>

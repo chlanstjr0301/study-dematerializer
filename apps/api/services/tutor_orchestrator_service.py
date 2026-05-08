@@ -88,24 +88,52 @@ def classify_learning_task(message: str) -> str:
 # ---------------------------------------------------------------------------
 
 _COMPACTNESS_TOPIC_PATTERNS: list[tuple[str, str]] = [
-    # Order matters: most specific first
-    (r"compact하지 않|왜.*compact|bounded.*compact|compact.*bounded|\(0,?\s*1\).*compact|compact.*\(0,?\s*1\)", "why_not_compact"),
-    (r"finite subcover|유한 부분덮개|유한.*덮개|subcover.*뭐|subcover.*뭔", "finite_subcover"),
-    (r"closed and bounded|닫히고 유계|heine.?borel|하이네.?보렐|metric space.*일반|일반.*metric", "heine_borel_scope"),
-    (r"uniform.?continu|균등.*연속|proof schema.*compact|compact.*proof schema|증명.*compact.*uniform|compact.*증명.*uniform", "compactness_in_uniform_continuity"),
-    (r"내가 이해한|이거 맞아|이 설명 맞아|내 설명.*맞|유한.*점.*대표|유한 개.*점", "self_explanation_critique"),
-    (r"STUDY|정리해줘|기록|태그로|오개념.*태그|misconception.*정리", "study_update_misconception"),
+    # Priority order: most specific first, why_not_compact last
+    # 1. study_update — requires STUDY-specific or learning-record context
+    (r"STUDY\.?md|학습\s*기록|남길|다음\s*인출|오개념.*정리|태그로\s*정리", "study_update_misconception"),
+    # 2. self_explanation_critique
+    (r"내가 이해한|이 설명 맞|평가|틀린\s*부분|오개념\s*태그|유한\s*개의\s*점|대표", "self_explanation_critique"),
+    # 3. compactness_in_uniform_continuity
+    (r"uniform.?continu|균등\s*연속|uniformly\s+continuous|연속함수|proof\s+schema|증명\s*구조", "compactness_in_uniform_continuity"),
+    # 4. heine_borel_scope
+    (r"closed\s+and\s+bounded|closed\s+bounded|닫히고\s*유계|닫힌|유계|heine|borel|하이네|보렐|R에서는|R\^n|metric\s+space\s*일반|일반\s*metric|일반\s*공간|항상|성립", "heine_borel_scope"),
+    # 5. finite_subcover
+    (r"finite\s+subcover|유한\s*부분덮개|부분덮개|원래\s+open\s+cover에서|몇\s*개만\s*골라|열린집합\s*몇\s*개", "finite_subcover"),
+    # 6. why_not_compact — lowest priority
+    (r"\(0,?\s*1\)|compact하지|not\s+compact|왜\s+compact하지|bounded인데\s*왜|open\s+cover\s*관점", "why_not_compact"),
 ]
+
+# Vague follow-up: short context-dependent messages that need recent_messages
+_VAGUE_FOLLOWUP_RE = re.compile(
+    r"그게|그거|그건|그래서|그럼|방금|다시\s*설명|예시\s*들어|그\s*관점"
+    r"|^(왜|뭐야|뭐|예시|설명해|알려줘?|어떻게)\s*[?!.줘봐해]*$",
+    re.IGNORECASE,
+)
 
 
 def _match_compactness_topic(message: str, recent_messages: list[str] | None) -> str | None:
-    """Match a specific compactness sub-topic from message + context."""
-    combined = message
-    if recent_messages:
-        combined += " " + " ".join(recent_messages[-3:])
+    """Match a specific compactness sub-topic. Current message dominates.
+
+    1. Special override: "내가 이해한" always → self_explanation_critique
+    2. Match current message alone against all patterns
+    3. Only fall back to recent_messages for vague follow-ups
+    """
+    # Override: self_explanation beats everything when "내가 이해한" present
+    if re.search(r"내가 이해한", message):
+        return "self_explanation_critique"
+
+    # Step 1: current message alone
     for pattern, topic in _COMPACTNESS_TOPIC_PATTERNS:
-        if re.search(pattern, combined, re.IGNORECASE):
+        if re.search(pattern, message, re.IGNORECASE):
             return topic
+
+    # Step 2: only use recent_messages for vague follow-ups
+    if recent_messages and _VAGUE_FOLLOWUP_RE.search(message):
+        combined = message + " " + " ".join(recent_messages[-3:])
+        for pattern, topic in _COMPACTNESS_TOPIC_PATTERNS:
+            if re.search(pattern, combined, re.IGNORECASE):
+                return topic
+
     return None
 
 
