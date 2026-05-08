@@ -2,8 +2,10 @@ import { useState } from 'react';
 import type { SelfExplainResponse } from '../../api/types';
 import RichMathText from '../common/RichMathText';
 import GraderProvenance from '../common/GraderProvenance';
+import { getRepresentationDisplay } from './representationDisplayAdapter';
 
 interface RepresentationStepProps {
+  conceptId: string;
   representations: Record<string, string>;
   onNext: () => void;
   onSubmitSelfExplanation: (representationType: string, learnerExplanation: string) => Promise<SelfExplainResponse>;
@@ -25,6 +27,7 @@ const PREFERRED_ORDER = ['formal', 'intuitive', 'visual', 'counterexample', 'pro
 const REQUIRED_REPS = new Set(['formal', 'proof_schema']);
 
 export default function RepresentationStep({
+  conceptId,
   representations,
   onNext,
   onSubmitSelfExplanation,
@@ -93,23 +96,80 @@ export default function RepresentationStep({
       </div>
 
       {/* Representation card */}
-      <div style={{
-        background: '#f8fafc', border: '1px solid #e2e8f0',
-        borderRadius: 8, padding: '20px 24px', marginBottom: 16,
-      }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-          <span style={{ fontSize: 13, color: '#64748b' }}>
-            [{currentRep + 1}/{repEntries.length}] {rep.label}
-            {isRequired && <span style={{ color: '#dc2626', marginLeft: 4 }}>*필수</span>}
-          </span>
-          <span style={{ fontSize: 12, color: '#94a3b8' }}>
-            {viewedReps.size}/{repEntries.length} 확인
-          </span>
-        </div>
-        <RichMathText className="rich-math-text" >
-          {rep.content}
-        </RichMathText>
-      </div>
+      {(() => {
+        const display = getRepresentationDisplay(conceptId, rep.key, rep.content);
+        if (display) {
+          return (
+            <div style={{
+              background: '#f8fafc', border: '1px solid #e2e8f0',
+              borderRadius: 8, padding: '20px 24px', marginBottom: 16,
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                <span style={{ fontSize: 13, color: '#64748b' }}>
+                  [{currentRep + 1}/{repEntries.length}] {rep.label}
+                  {isRequired && <span style={{ color: '#dc2626', marginLeft: 4 }}>*필수</span>}
+                </span>
+                <span style={{ fontSize: 12, color: '#94a3b8' }}>
+                  {viewedReps.size}/{repEntries.length} 확인
+                </span>
+              </div>
+              <h3 style={{ fontSize: 16, fontWeight: 600, color: '#1e293b', marginBottom: 4 }}>
+                {display.titleKo}
+              </h3>
+              {display.subtitleKo && (
+                <p style={{ fontSize: 13, color: '#64748b', marginBottom: 12 }}>{display.subtitleKo}</p>
+              )}
+              <RichMathText className="rich-math-text">
+                {display.contentKo}
+              </RichMathText>
+              {display.keyTakeawaysKo && display.keyTakeawaysKo.length > 0 && (
+                <div style={{ marginTop: 14, padding: '10px 14px', background: '#eff6ff', borderRadius: 6, border: '1px solid #bfdbfe' }}>
+                  <span style={{ fontSize: 12, fontWeight: 600, color: '#1e40af' }}>핵심 체크</span>
+                  <ul style={{ margin: '6px 0 0 16px', padding: 0, fontSize: 13, color: '#1e3a5f' }}>
+                    {display.keyTakeawaysKo.map((t, i) => (
+                      <li key={i}><RichMathText className="rich-math-text" inline>{t}</RichMathText></li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {display.commonPitfallKo && (
+                <div style={{ marginTop: 10, padding: '10px 14px', background: '#fef3c7', borderRadius: 6, border: '1px solid #fcd34d' }}>
+                  <span style={{ fontSize: 12, fontWeight: 600, color: '#92400e' }}>주의할 점</span>
+                  <p style={{ fontSize: 13, color: '#78350f', marginTop: 4, marginBottom: 0 }}>
+                    <RichMathText className="rich-math-text" inline>{display.commonPitfallKo}</RichMathText>
+                  </p>
+                </div>
+              )}
+              <details style={{ marginTop: 12 }}>
+                <summary style={{ fontSize: 12, color: '#94a3b8', cursor: 'pointer' }}>원문 카드 보기</summary>
+                <div style={{ marginTop: 8, padding: '10px 14px', background: '#fff', border: '1px solid #e5e7eb', borderRadius: 4 }}>
+                  <RichMathText className="rich-math-text">{display.rawContent}</RichMathText>
+                </div>
+              </details>
+            </div>
+          );
+        }
+        // Fallback: no adapter — render raw content directly
+        return (
+          <div style={{
+            background: '#f8fafc', border: '1px solid #e2e8f0',
+            borderRadius: 8, padding: '20px 24px', marginBottom: 16,
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+              <span style={{ fontSize: 13, color: '#64748b' }}>
+                [{currentRep + 1}/{repEntries.length}] {rep.label}
+                {isRequired && <span style={{ color: '#dc2626', marginLeft: 4 }}>*필수</span>}
+              </span>
+              <span style={{ fontSize: 12, color: '#94a3b8' }}>
+                {viewedReps.size}/{repEntries.length} 확인
+              </span>
+            </div>
+            <RichMathText className="rich-math-text">
+              {rep.content}
+            </RichMathText>
+          </div>
+        );
+      })()}
 
       {/* Self-explanation textarea */}
       {!readOnly && !currentResult && (

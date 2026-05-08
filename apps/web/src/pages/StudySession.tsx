@@ -421,6 +421,7 @@ export default function StudySession() {
         )}
         {displayStep === 2 && (
           <RepresentationStep
+            conceptId={concept}
             representations={sessionData.representations}
             onNext={() => handleAdvance('representations')}
             onSubmitSelfExplanation={handleSubmitSelfExplanation}

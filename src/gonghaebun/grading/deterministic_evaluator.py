@@ -140,19 +140,40 @@ def _generate_feedback(
     missing_terms: list[str],
     misconception_ids: list[str],
 ) -> str:
-    """Generate Korean feedback text."""
-    parts: list[str] = []
+    """Generate Korean structured feedback text."""
+    sections: list[str] = []
+
+    # 잘한 부분
     if passed:
-        parts.append("잘 설명했습니다.")
+        sections.append("### 잘한 부분\n핵심 개념을 정확히 설명했습니다.")
+    elif not missing_terms and not misconception_ids:
+        sections.append("### 잘한 부분\n시도해 주셨습니다.")
     else:
+        # Partial credit — acknowledge attempt
+        if len(missing_terms) < 3 and not misconception_ids:
+            sections.append("### 잘한 부분\n대부분의 핵심 용어를 포함하고 있습니다.")
+        else:
+            sections.append("### 잘한 부분\n관련 개념을 시도했습니다.")
+
+    # 빠진 부분
+    if missing_terms:
+        terms_kr = ", ".join(missing_terms[:5])
+        sections.append(f"### 빠진 부분\n다음 용어/개념이 누락되었습니다: {terms_kr}")
+    elif not passed:
+        sections.append("### 빠진 부분\n설명이 충분히 구체적이지 않습니다.")
+
+    # 오개념
+    if misconception_ids:
+        sections.append("### 주의\n일부 오개념이 감지되었습니다. 정의를 다시 확인해 보세요.")
+
+    # 다음 확인 질문
+    if not passed:
         if missing_terms:
-            terms_kr = ", ".join(missing_terms[:3])
-            parts.append(f"다음 용어가 누락되었습니다: {terms_kr}")
-        if misconception_ids:
-            parts.append("일부 오개념이 감지되었습니다.")
-    if not parts:
-        parts.append("다시 시도해 보세요.")
-    return " ".join(parts)
+            sections.append(f"### 다음 확인 질문\n{missing_terms[0]}이(가) 이 개념에서 어떤 역할을 하는지 설명할 수 있나요?")
+        else:
+            sections.append("### 다음 확인 질문\n이 개념의 정의를 한 문장으로 다시 써 보세요.")
+
+    return "\n\n".join(sections)
 
 
 def _generate_recall_trigger(
