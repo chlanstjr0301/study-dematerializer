@@ -113,7 +113,12 @@ class TestGapInference:
     def test_gap_왜(self):
         r = _analyze("왜 compactness가 중요한지")
         data = r.json()
-        assert "필요성" in data["suspected_gap"] or "동기" in data["suspected_gap"]
+        # Tutor overlay handles "왜.*compact" → bubble with direct_answer
+        if data.get("intent") == "tutor_response":
+            assert data["direct_answer"] is not None
+            assert data["render_mode"] == "bubble"
+        else:
+            assert "필요성" in data["suspected_gap"] or "동기" in data["suspected_gap"]
 
     def test_gap_default(self):
         r = _analyze("compactness")
