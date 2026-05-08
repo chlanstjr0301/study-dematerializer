@@ -418,7 +418,17 @@ def analyze_message(
                 concept_id=intent_concept_id,
                 source_id=source_id,
             )
-            if tutor_result and tutor_result.confidence >= 0.5:
+            # Accept tutor result if:
+            # - not None, has non-empty direct_answer, confidence >= 0.3
+            # - OR primary_concept is compactness with non-empty answer
+            _accepted = False
+            if tutor_result and tutor_result.direct_answer:
+                if tutor_result.confidence >= 0.3:
+                    _accepted = True
+                elif tutor_result.primary_concept == "compactness":
+                    _accepted = True
+
+            if _accepted:
                 _analyzer_logger.warning(
                     "tutor_overlay_success",
                     extra={
@@ -431,16 +441,20 @@ def analyze_message(
                     },
                 )
                 return _build_tutor_response(tutor_result)
+            elif tutor_result:
+                _analyzer_logger.warning(
+                    "tutor_overlay_rejected",
+                    extra={
+                        "reason": f"confidence={tutor_result.confidence}_empty_answer={not tutor_result.direct_answer}",
+                        "confidence": tutor_result.confidence,
+                        "direct_answer_len": len(tutor_result.direct_answer) if tutor_result.direct_answer else 0,
+                        "primary_concept": tutor_result.primary_concept,
+                    },
+                )
             else:
                 _analyzer_logger.warning(
                     "tutor_overlay_none",
-                    extra={
-                        "reason": (
-                            f"low_confidence={tutor_result.confidence}"
-                            if tutor_result
-                            else "tutor_returned_none"
-                        ),
-                    },
+                    extra={"reason": "tutor_returned_none"},
                 )
         except Exception as e:
             _analyzer_logger.warning(

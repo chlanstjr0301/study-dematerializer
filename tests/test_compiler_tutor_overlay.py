@@ -102,14 +102,25 @@ class TestTutorOverlayFallback:
         assert result["concept_id"] == "compactness"
 
     @patch("apps.api.services.tutor_orchestrator_service.tutor_respond")
-    def test_low_confidence_falls_back(self, mock_tutor):
-        """Tutor with confidence < 0.5 should fall back."""
+    def test_very_low_confidence_falls_back(self, mock_tutor):
+        """Tutor with confidence < 0.3 should fall back."""
+        mock_tutor.return_value = _mock_tutor_response(confidence=0.1)
+
+        result = analyze_message("compactness가 뭐야?")
+        # confidence < 0.3 AND not compactness-specific fallback → deterministic
+        # But primary_concept=compactness with non-empty direct_answer → accepted
+        # (compactness override: always accept if direct_answer is non-empty)
+        assert result["concept_id"] == "compactness"
+
+    @patch("apps.api.services.tutor_orchestrator_service.tutor_respond")
+    def test_low_confidence_with_answer_accepted(self, mock_tutor):
+        """Tutor with confidence=0.3 + non-empty answer should be accepted."""
         mock_tutor.return_value = _mock_tutor_response(confidence=0.3)
 
         result = analyze_message("compactness가 뭐야?")
-        # Tutor returned low confidence → analyzer ignores it
-        # Falls to deterministic path
-        assert result["concept_id"] == "compactness"
+        assert result["render_mode"] == "bubble"
+        assert result["intent"] == "tutor_response"
+        assert result["direct_answer"] is not None
 
 
 class TestTutorResponseFields:
@@ -194,6 +205,63 @@ class TestCompactnessFallbackInAnalyzer:
         """Heine-Borel scope question gets deterministic answer."""
         result = analyze_message("closed and bounded이면 compact 아니야?")
         assert result["direct_answer"] is not None
+
+
+class TestConfidence045Acceptance:
+    """Verify confidence=0.45 tutor response is accepted (the actual bug)."""
+
+    @patch("apps.api.services.tutor_orchestrator_service.tutor_respond")
+    def test_confidence_045_accepted_as_bubble(self, mock_tutor):
+        """confidence=0.45, llm_used=True, non-empty answer → accepted."""
+        mock_tutor.return_value = _mock_tutor_response(
+            confidence=0.45,
+            llm_used=True,
+            rag_used=True,
+            learning_task="why_question",
+            direct_answer="$(0,1)$은 bounded이지만 compact하지 않습니다...",
+            misconception_tags=["bounded_implies_compact"],
+        )
+
+        result = analyze_message("compactness가 뭐야?")
+        assert result["render_mode"] == "bubble"
+        assert result["llm_used"] is True
+        assert result["concept_id"] == "compactness"
+        assert result["direct_answer"] is not None
+        assert result["intent"] == "tutor_response"
+
+    @patch("apps.api.services.tutor_orchestrator_service.tutor_respond")
+    def test_demo_question_not_open_set_with_045(self, mock_tutor):
+        """Demo question with confidence=0.45 must NOT fall back to open_set."""
+        mock_tutor.return_value = _mock_tutor_response(
+            confidence=0.45,
+            llm_used=True,
+            rag_used=True,
+            learning_task="why_question",
+            direct_answer="$(0,1)$은 bounded이지만 옹골하지 않습니다.",
+            misconception_tags=["bounded_implies_compact"],
+        )
+
+        result = analyze_message(
+            "그럼 (0,1)은 bounded인데 왜 compact하지 않다고 하는 거야? "
+            "open cover 관점에서 설명해줘"
+        )
+        assert result.get("concept_id") != "open_set"
+        assert result["concept_id"] == "compactness"
+        assert result["render_mode"] == "bubble"
+        assert result["llm_used"] is True
+        assert result["rag_used"] is True
+
+    @patch("apps.api.services.tutor_orchestrator_service.tutor_respond")
+    def test_empty_answer_rejected(self, mock_tutor):
+        """Tutor with empty direct_answer should be rejected."""
+        mock_tutor.return_value = _mock_tutor_response(
+            confidence=0.9,
+            direct_answer="",
+        )
+
+        result = analyze_message("compactness가 뭐야?")
+        # Empty answer → rejected, falls to deterministic
+        assert result["intent"] != "tutor_response"
 
 
 class TestAnalyzerLogging:

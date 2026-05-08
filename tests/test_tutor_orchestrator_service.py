@@ -241,6 +241,47 @@ class TestTutorOutputSchema:
     def test_schema_no_additional_properties(self):
         assert TUTOR_OUTPUT_SCHEMA["additionalProperties"] is False
 
+    def test_schema_openai_strict_compatible(self):
+        """Every object node must have additionalProperties=false for OpenAI strict mode."""
+        schema = TUTOR_OUTPUT_SCHEMA
+        assert schema.get("additionalProperties") is False
+
+        # study_update_candidate must use anyOf (not type array) for OpenAI strict
+        suc = schema["properties"]["study_update_candidate"]
+        assert "anyOf" in suc, "study_update_candidate must use anyOf for OpenAI strict mode"
+
+        # Find the object variant
+        obj_variant = None
+        for variant in suc["anyOf"]:
+            if variant.get("type") == "object":
+                obj_variant = variant
+                break
+        assert obj_variant is not None, "study_update_candidate must have object variant"
+        assert obj_variant.get("additionalProperties") is False
+
+    def test_schema_no_type_arrays(self):
+        """OpenAI strict mode does not support type arrays like ['string', 'null']."""
+        def _check_no_type_array(node, path="root"):
+            if isinstance(node, dict):
+                if "type" in node and isinstance(node["type"], list):
+                    raise AssertionError(
+                        f"type array found at {path}: {node['type']}. "
+                        "Use anyOf instead for OpenAI strict mode."
+                    )
+                for key, val in node.items():
+                    _check_no_type_array(val, f"{path}.{key}")
+            elif isinstance(node, list):
+                for i, item in enumerate(node):
+                    _check_no_type_array(item, f"{path}[{i}]")
+
+        _check_no_type_array(TUTOR_OUTPUT_SCHEMA)
+
+    def test_study_update_candidate_null_variant(self):
+        """study_update_candidate must accept null."""
+        suc = TUTOR_OUTPUT_SCHEMA["properties"]["study_update_candidate"]
+        null_found = any(v.get("type") == "null" for v in suc["anyOf"])
+        assert null_found, "study_update_candidate must have null variant"
+
 
 class TestCompactnessDeterministicFallback:
     """Deterministic compactness fallback answers."""

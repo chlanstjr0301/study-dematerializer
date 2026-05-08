@@ -293,7 +293,9 @@ TUTOR_OUTPUT_SCHEMA = {
     "type": "object",
     "properties": {
         "direct_answer": {"type": "string"},
-        "primary_concept": {"type": ["string", "null"]},
+        "primary_concept": {
+            "anyOf": [{"type": "string"}, {"type": "null"}],
+        },
         "supporting_concepts": {
             "type": "array",
             "items": {"type": "string"},
@@ -308,15 +310,23 @@ TUTOR_OUTPUT_SCHEMA = {
             "items": {"type": "string"},
         },
         "study_update_candidate": {
-            "type": ["object", "null"],
-            "properties": {
-                "concept_id": {"type": ["string", "null"]},
-                "summary": {"type": "string"},
-                "evidence": {"type": "array", "items": {"type": "string"}},
-                "misconception_tags": {"type": "array", "items": {"type": "string"}},
-                "next_recall_tasks": {"type": "array", "items": {"type": "string"}},
-            },
-            "required": ["concept_id", "summary", "evidence", "misconception_tags", "next_recall_tasks"],
+            "anyOf": [
+                {
+                    "type": "object",
+                    "properties": {
+                        "concept_id": {
+                            "anyOf": [{"type": "string"}, {"type": "null"}],
+                        },
+                        "summary": {"type": "string"},
+                        "evidence": {"type": "array", "items": {"type": "string"}},
+                        "misconception_tags": {"type": "array", "items": {"type": "string"}},
+                        "next_recall_tasks": {"type": "array", "items": {"type": "string"}},
+                    },
+                    "required": ["concept_id", "summary", "evidence", "misconception_tags", "next_recall_tasks"],
+                    "additionalProperties": False,
+                },
+                {"type": "null"},
+            ],
         },
         "confidence": {"type": "number"},
     },
